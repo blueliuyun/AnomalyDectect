@@ -70,6 +70,8 @@ influence = 0
 result = thresholding_algo(y, lag=lag, threshold=threshold, influence=influence)
 
 # Plot result
+pylab.figure(figsize=(32, 16))
+#
 pylab.subplot(211)
 pylab.plot(np.arange(1, len(y)+1), y)
 

@@ -6,6 +6,34 @@ Reference : https://stackoverflow.com/questions/22583391/peak-signal-detection-i
 # Implementation of algorithm from https://stackoverflow.com/a/22640362/6029703
 
 @author: tianye
+###
+A、名称：一阶滞后滤波法
+B、方法：
+    取a=0-1，本次滤波结果=(1-a)*本次采样值+a*上次滤波结果。
+C、优点：
+    对周期性干扰具有良好的抑制作用；
+    适用于波动频率较高的场合。
+D、缺点：
+    相位滞后，灵敏度低；
+    滞后程度取决于a值大小；
+    不能消除滤波频率高于采样频率1/2的干扰信号。
+
+###
+A、名称：递推平均滤波法（又称滑动平均滤波法）
+B、方法：
+    把连续取得的N个采样值看成一个队列，队列的长度固定为N，
+    每次采样到一个新数据放入队尾，并扔掉原来队首的一次数据（先进先出原则），
+    把队列中的N个数据进行算术平均运算，获得新的滤波结果。
+    N值的选取：流量，N=12；压力，N=4；液面，N=4-12；温度，N=1-4。
+C、优点：
+    对周期性干扰有良好的抑制作用，平滑度高；
+    适用于高频振荡的系统。
+D、缺点：
+    灵敏度低，对偶然出现的脉冲性干扰的抑制作用较差；
+    不易消除由于脉冲干扰所引起的采样值偏差；
+    不适用于脉冲干扰比较严重的场合；
+    比较浪费RAM。
+
 """
 import numpy as np
 import pylab
@@ -36,7 +64,7 @@ def thresholding_algo(y, lag, threshold, influence):
             @2018-11-20 对异常点的数值进行平滑，以便评估下下个点是否为异常点。
              因为不做平滑，由于当前是个异常点，对平均值、方差影响较大，若是下一个点仍是异常点，可能不会识别。
             """
-            filteredY[i] = influence * y[i] + (1 - influence) * filteredY[i-1]
+            filteredY[i] = influence * y[i] + (1 - influence) * filteredY[i-1] ### 一阶滞后滤波法
             avgFilter[i] = np.mean(filteredY[(i-lag+1):i+1])
             stdFilter[i] = np.std(filteredY[(i-lag+1):i+1], ddof=1)
         else:
@@ -70,7 +98,7 @@ influence = 0
 result = thresholding_algo(y, lag=lag, threshold=threshold, influence=influence)
 
 # Plot result
-pylab.figure(figsize=(32, 16))
+pylab.figure(figsize=(16, 8))
 #
 pylab.subplot(211)
 pylab.plot(np.arange(1, len(y)+1), y)

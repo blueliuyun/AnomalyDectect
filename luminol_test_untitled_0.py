@@ -3,10 +3,13 @@
 Created on Mon Nov 26 10:07:58 2018
 
 @author: tianye
+  1. 用 timestamp 找对应的值  
+
 """
 
 import pandas as pd
 import numpy as np
+import pylab
 import luminol
 from luminol.anomaly_detector import AnomalyDetector
 
@@ -15,7 +18,7 @@ from luminol.anomaly_detector import AnomalyDetector
 asData = [0]
 asTime = [0]
 
-my_detector = AnomalyDetector(time_series='./SAR-device.sdb.await_Index582__L3_OUTER_L5_1000_A_BAY01_0043_20181001_041918_151__U0.csv', algorithm_name='bitmap_detector', algorithm_params = {'lag_window_size': 128 })
+my_detector = AnomalyDetector(time_series='./SAR-device.sdb.await_U0_L7_0_B_235_286__test.csv', algorithm_name='exp_avg_detector')#derivative_detector'exp_avg_detector#'bitmap_detector)#, algorithm_params = {'smoothing factor': 0.2, 'lag_window_size': 64 })
 score = my_detector.get_all_scores()
 for timestamp, value in score.iteritems():
     asData.append(value)
@@ -26,6 +29,12 @@ for timestamp, value in score.iteritems():
 asAnomal = my_detector.get_anomalies()
 for a in asAnomal:
     print(a)
+    
+pylab.figure(figsize=(16, 8))
+pylab.subplot(311)
+asData = asData[:57]
+pylab.plot(np.arange(1, len(asData)+1), asData) #测值
+pylab.grid(True)
 
 """
 if asAnomal:

@@ -18,7 +18,9 @@ from luminol.anomaly_detector import AnomalyDetector
 asData = [0]
 asTime = [0]
 
-my_detector = AnomalyDetector(time_series='./SAR-device.sdb.await_U0_L7_0_B_235_286__test.csv', algorithm_name='exp_avg_detector')#derivative_detector'exp_avg_detector#'bitmap_detector)#, algorithm_params = {'smoothing factor': 0.2, 'lag_window_size': 64 })
+my_detector = AnomalyDetector(
+        time_series='./SAR-device.sdb.await__New__Index580__L3 区外 L5 1000欧 B相__BAY01_0046_20181001_044812_313__U0.csv', 
+        algorithm_name='derivative_detector')#derivative_detector'exp_avg_detector#'bitmap_detector)#, algorithm_params = {'smoothing factor': 0.2, 'lag_window_size': 64 })
 score = my_detector.get_all_scores()
 for timestamp, value in score.iteritems():
     asData.append(value)
@@ -32,7 +34,7 @@ for a in asAnomal:
     
 pylab.figure(figsize=(16, 8))
 pylab.subplot(311)
-asData = asData[:57]
+#asData = asData[:585]
 pylab.plot(np.arange(1, len(asData)+1), asData) #测值
 pylab.grid(True)
 

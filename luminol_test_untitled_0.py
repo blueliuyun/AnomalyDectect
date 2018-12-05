@@ -19,7 +19,8 @@ asData = [0]
 asTime = [0]
 
 my_detector = AnomalyDetector(
-        time_series='./SAR-device.sdb.await__New__Index580__L3 区外 L5 1000欧 B相__BAY01_0046_20181001_044812_313__U0.csv', 
+        time_series='./SAR-device.sdb.await__研发中心波形_高阻接地_00025_20171025_201648_049_F__U0.csv',
+        score_threshold=0.1, #1.0,
         algorithm_name='derivative_detector')#derivative_detector'exp_avg_detector#'bitmap_detector)#, algorithm_params = {'smoothing factor': 0.2, 'lag_window_size': 64 })
 score = my_detector.get_all_scores()
 for timestamp, value in score.iteritems():
@@ -27,14 +28,15 @@ for timestamp, value in score.iteritems():
     #asTime.append(pd.to_datetime(timestamp))
     asTime.append(timestamp)
     #print(timestamp, value)
-    
+
+# 异常点集合    
 asAnomal = my_detector.get_anomalies()
 for a in asAnomal:
     print(a)
     
 pylab.figure(figsize=(16, 8))
 pylab.subplot(311)
-#asData = asData[:585]
+#asData = asData[:868]
 pylab.plot(np.arange(1, len(asData)+1), asData) #测值
 pylab.grid(True)
 
@@ -48,3 +50,9 @@ if asAnomal:
     else:
         print('False Correlator')
 """
+
+# 1. 找到前 3 CYCLE 中最大的 MAXscore； 这个思路中 【 2倍的比例关系】 仅是根据已有数据的试验分析。
+# 2. 从第 (128*3+1) 点开始与 MAXscore 比较，
+# 2.1 如果 MAXscore < CurrentScore <= 2*MAXscore，则用CurrentScore更新 MAXscore；
+# 2.2 如果 CurrentScore > 2*MAXscore，则认为找到了突变点。
+

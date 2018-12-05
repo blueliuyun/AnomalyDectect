@@ -1,3 +1,0 @@
-numpy
-scipy
-future==0.16.0

@@ -20,7 +20,7 @@ asData = [0]
 asTime = [0]
 
 my_detector = AnomalyDetector(
-        time_series='./SAR-device.sdb.await__研发中心波形_高阻接地_00025_20171025_201648_049_F__U0.csv',
+        time_series='./SAR-device.sdb.await__DCU1923ZeroOrder(4_8)2017-11-10 11_51_02_831016.csv',
         score_threshold=0.1, #1.0,
         algorithm_name='derivative_detector')#derivative_detector'exp_avg_detector#'bitmap_detector)#, algorithm_params = {'smoothing factor': 0.2, 'lag_window_size': 64 })
 score = my_detector.get_all_scores()
@@ -30,14 +30,14 @@ for timestamp, value in score.iteritems():
     asTime.append(timestamp)
     #print(timestamp, value)
 
-# 异常点集合    
+# 异常点集合
 asAnomal = my_detector.get_anomalies()
 for a in asAnomal:
     print(a)
     
 pylab.figure(figsize=(16, 8))
 pylab.subplot(311)
-#asData = asData[:868]
+#asData = asData[:582]
 pylab.plot(np.arange(1, len(asData)+1), asData) #测值
 pylab.grid(True)
 

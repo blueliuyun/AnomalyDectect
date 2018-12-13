@@ -75,13 +75,28 @@ P[0] = 1.0
 
 # @2018-11-30 下面的 reage() 从 0 开始时，预测值开头曲线平稳，比为 1 时的效果好。
 for k in range(1,n_iter):  
-    # 预测  
-    xhatminus[k] = xhat[k-1]  #X(k|k-1) = AX(k-1|k-1) + BU(k) + W(k),A=1,BU(k) = 0  
+    ### 预测  
+    """
+    s1. 预测，做出先验估计
+        X(k|k-1) =A * X(k-1|k-1) + B * U(k)      —— 式1
+        对于一维的情况，A 可以看成一个常数使用，经常取1，同时对于B经常取零。
+        这只是一个估计，B 取0没事，问题不大，可以在估计噪声方差得到修正。
+    """
+    xhatminus[k] = xhat[k-1]  #X(k|k-1) = A*X(k-1|k-1) + B*U(k) + W(k),A=1,BU(k) = 0
+    """
+    s2. 预测，用P表示 covariance
+        P(k|k-1) = A* P(k-1|k-1)* A' + Q          —— 式2
+        P(k|k-1) 是 X(k|k-1) 对应的 covariance，P(k-1|k-1)是X(k-1|k-1)对应的covariance，
+        A’表示A的转置矩阵，Q是系统过程的covariance。
+    """
     Pminus[k] = P[k-1]+Q      #P(k|k-1) = AP(k-1|k-1)A' + Q(k) ,A=1  
   
-    # 更新  
-    K[k] = Pminus[k]/( Pminus[k]+R ) #Kg(k)=P(k|k-1)H'/[HP(k|k-1)H' + R],H=1  
+    ### 更新  
+    # s3. 其中 K[k] 为卡尔曼增益（Kalman Gain）。
+    K[k] = Pminus[k]/( Pminus[k]+R ) #Kg(k)=P(k|k-1)H'/[HP(k|k-1)H' + R],H=1
+    # s4. k状态下的最优化估计值 xhat[k]，即滤波值。
     xhat[k] = xhatminus[k]+K[k]*(z[k]-xhatminus[k]) #X(k|k) = X(k|k-1) + Kg(k)[Z(k) - HX(k|k-1)], H=1  
+    # s5. 后验估计，即 k状态下的 xhat[k] 的 covariance ，从而算法就可以自回归的运算下去。
     P[k] = (1-K[k])*Pminus[k] #P(k|k) = (1 - Kg(k)H)P(k|k-1), H=1  
 
 pylab.figure(figsize=(16, 8))

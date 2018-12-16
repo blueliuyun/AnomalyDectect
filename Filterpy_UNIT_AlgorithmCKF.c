@@ -174,8 +174,16 @@ static void unit_ckf_predict()
  * ----------
  * 返回值类型是数组。
  */ 
-static void unit_ckf_spherical_radial_sigmas()
+static void unit_ckf_spherical_radial_sigmas(MATRIX_F32_STRUCT* saX, MATRIX_F32_STRUCT* smP)
 {
+    // get Rows of P
+    unsigned short nRows = smP->numRows;
+    float *pData = saX->pData;
+
+    //sigmas = np.empty((2*n, n))  // sigmas 如何返回有效空间内存呢？
+    MATRIX_F32_STRUCT sigmas;
+    eye(&sigmas, nRows*2, nRows);    
+    //U = cholesky(P) * sqrt(n)
 
 }
 

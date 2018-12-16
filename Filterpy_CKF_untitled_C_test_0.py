@@ -11,7 +11,7 @@ Created on Sat Dec  1 16:22:13 2018
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.random import randn
-from filterpy.kalman import UnscentedKalmanFilter, unscented_transform, MerweScaledSigmaPoints, CubatureKalmanFilter
+from filterpy.kalman import UnscentedKalmanFilter, unscented_transform, MerweScaledSigmaPoints, CubatureKalmanFilter, ExtendedKalmanFilter
 from filterpy.common import Q_discrete_white_noise
 from numpy.random import normal
 
@@ -46,7 +46,6 @@ sigmas = points
 #ukf = UnscentedKalmanFilter(dim_x=2, dim_z=1, dt=2, hx=hx, fx=fx, points=sigmas)
 ukf = CubatureKalmanFilter(dim_x=2, dim_z=1, dt=2, hx=hx, fx=fx)
 
-#
 # @2018-12-02 P 值越大，开始阶段收敛的越快，这里 ==10 就可以，P值仅与起始阶段有关； 系统的后期依赖 R,Q值。
 # @2018-12-13 P 值修改为 1.0 无其他原因。
 # covariance matrix

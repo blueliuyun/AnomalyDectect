@@ -276,3 +276,13 @@ static unsigned short GetIndexInMatrix(MATRIX_F32_STRUCT* sm, unsigned short row
   if (sm) return row * sm->numCols + col;
   else return col * sm->numRows + row;
 }
+
+void main(){
+	eye(&sCKF.smP, 2, 2);
+	
+	*(sCKF.smP.pData) = 1;
+	*(sCKF.smP.pData+1) = -2;
+	*(sCKF.smP.pData+2) = 2;
+	*(sCKF.smP.pData+3) = 5;
+	_cholesky(&sCKF.smP);	
+} 

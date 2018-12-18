@@ -39,6 +39,7 @@ def hx(x):
 # @2018-12-02 修改 kappa=.1 ==> kappa=.0 时相位不再滞后。
 # @2018-12-02 修改 alpha=.3 ==> alpha=.001 滤波无明显好坏的效果。
 points = MerweScaledSigmaPoints(n=2, alpha=.001, beta=2., kappa=.0)
+#
 #sigmas = points.sigma_points(mean, p) 
 sigmas = points
 
@@ -128,4 +129,6 @@ c = np.array([[1, 2],[3, 4]]).T
 
 from scipy import array, linalg, dot
 aa = array([[1,-2],[2,5]])
+bb = array([[1],[2]])
+cc = array([[1,-2],[2,5],[3,6],[8,9]])
 L = linalg.cholesky(aa, lower=False)

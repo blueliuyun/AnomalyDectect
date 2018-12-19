@@ -56,6 +56,8 @@ static void unit_mat_diagonal_f32(MATRIX_F32_STRUCT* s);
 static void unit_mat_zero_f32(MATRIX_F32_STRUCT* s);
 static /*float*/void eye(MATRIX_F32_STRUCT* s, unsigned short nCol, unsigned short nRow);
 static unsigned short GetIndexInMatrix(MATRIX_F32_STRUCT* sm, unsigned short row, unsigned short col);
+static void unit_ckf_transform(MATRIX_F32_STRUCT* sm_sigmas_f, \
+    MATRIX_F32_STRUCT* sm_Q, MATRIX_F32_STRUCT* sa_x/*Array*/, MATRIX_F32_STRUCT* sm_P);
 
 /**
  * Init
@@ -97,16 +99,20 @@ static void CubatureKalmanFilter(unsigned short nDim_x, unsigned short nDim_z, u
 
     // sigma points transformed through f(x) and h(x)
     // variables for efficiency so we don't recreate every update
-    eye(&sCKF.sm_sigmas_f, nDim_x*2, nDim_x);
-    eye(&sCKF.sm_sigmas_h, nDim_x*2, nDim_z);
+    eye(&sCKF.sm_sigmas_f, nDim_x*2, nDim_x); // when nDim_x=2, then sm_sigmas_f is 4x2
+    eye(&sCKF.sm_sigmas_h, nDim_x*2, nDim_z); // and nDim_z=1, then sm_sigmas_h is 4x1, see hx()
 
     // these will always be a copy of x,P after predict() is called
-    sCKF.saX_prior = sCKF.saX;
-    sCKF.smP_prior = sCKF.smP;
+    eye(&sCKF.saX_prior, nDim_x, 1);
+    eye(&sCKF.smP_prior, nDim_x, nDim_x);
+    //sCKF.saX_prior = sCKF.saX;
+    //sCKF.smP_prior = sCKF.smP;
 
     //  these will always be a copy of x,P after update() is called
-    sCKF.saX_post = sCKF.saX;
-    sCKF.smP_post = sCKF.smP;
+    eye(&sCKF.saX_post, nDim_x, 1);
+    eye(&sCKF.smP_post, nDim_x, nDim_x);
+    //sCKF.saX_post = sCKF.saX;
+    //sCKF.smP_post = sCKF.smP;
 }
 
 /**
@@ -126,8 +132,8 @@ static void eye(MATRIX_F32_STRUCT* s, unsigned short nRow, unsigned short nCol)
     s->numCols = nCol;
     s->numRows = nRow;
     
-    unit_mat_zero_f32(s);
-    unit_mat_diagonal_f32(s);
+    unit_mat_zero_f32(s); // All is 0
+    //unit_mat_diagonal_f32(s); // 对角线是 1， 其他是 0 值
 }
 
 /**
@@ -199,7 +205,8 @@ static void _cholesky(MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smU)
 
     for(i = 0; i < nRows; i++) {
         unsigned short ii = GetIndexInMatrix(smP, i, i);
-        for (unsigned short k = 0; k < i; k++) {
+        unsigned short k = 0;
+        for (/*unsigned short*/ k = 0; k < i; k++) {
             unsigned short ki = GetIndexInMatrix(smP, k, i);
             a[ii] = a[ii] - a[ki] * a[ki];
         }
@@ -210,9 +217,11 @@ static void _cholesky(MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smU)
         }
 
         a[ii] = sqrt(a[ii]);
-        for (unsigned short j = i + 1; j < nRows; j++) {
+        unsigned short j=0;
+        for (/*unsigned short*/ j = i + 1; j < nRows; j++) {
             unsigned short ij = GetIndexInMatrix(smP, i, j);
-            for (unsigned short k = 0; k < i; k++) {
+            unsigned short k=0;
+            for (/*unsigned short*/ k = 0; k < i; k++) {
                 unsigned short ki = GetIndexInMatrix(smP, k, i);
                 unsigned short kj = GetIndexInMatrix(smP, k, j);
                 a[ij] = a[ij] - a[ki] * a[kj];
@@ -222,8 +231,9 @@ static void _cholesky(MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smU)
     }
     
     // Clear out the lower matrix
-    for (unsigned short i = 1; i < nRows; i++) {
-        for (unsigned short j = 0; j < i; j++) {
+    unsigned short j=0;
+    for (i = 1; i < nRows; i++) {
+        for (j = 0; j < i; j++) {
             unsigned short ij = GetIndexInMatrix(smP, i, j);
             a[ij] = 0;
         }
@@ -252,7 +262,7 @@ static unsigned short GetIndexInMatrix(MATRIX_F32_STRUCT* sm, unsigned short row
  * ----------
  * 返回值类型是数组。
  */ 
-static MATRIX_F32_STRUCT unit_ckf_spherical_radial_sigmas(MATRIX_F32_STRUCT* saX, MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smSigma)
+static void unit_ckf_spherical_radial_sigmas(MATRIX_F32_STRUCT* saX, MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smSigma)
 {
     // get Rows of P
     unsigned short nRows = smP->numRows;  // n, _ = P.shape
@@ -299,11 +309,17 @@ static void unit_ckf_predict()
     unit_ckf_spherical_radial_sigmas(&sCKF.saX, &sCKF.smP, &sCKF.smSigma);
     
     // evaluate cubature points
-    for(unsigned short k=0; k<sCKF._num_sigmas; k++){
+    unsigned short k=0;
+    for(k=0; k<sCKF._num_sigmas; k++){
         unit_ckf_fx(sCKF.sm_sigmas_f.pData+(sCKF.sm_sigmas_f.numCols*k), sCKF.smSigma.pData+(sCKF.smSigma.numCols*k));
     }
 
     //self.x, self.P = ckf_transform(self.sigmas_f, self.Q)
+    unit_ckf_transform(&sCKF.sm_sigmas_f, &sCKF.smQ, &sCKF.saX, &sCKF.smP);
+
+    // save prior
+    memcpy(sCKF.saX_prior.pData, sCKF.saX.pData, sCKF.saX.numRows*sCKF.saX.numCols*sizeof(float));
+    memcpy(sCKF.smP_prior.pData, sCKF.smP.pData, sCKF.smP.numRows*sCKF.smP.numCols*sizeof(float));
 }
 
 /**
@@ -315,17 +331,13 @@ static void unit_ckf_predict()
 static void unit_ckf_matrix_outer(float* pData, 
     unsigned short size, MATRIX_F32_STRUCT* sm)
 {
-    unsigned short i=0, j=0, k=0;
-    float* pLocalData = pData;
-    for(k=0; k<(size*size); k++){
-        unsigned short data = *(pData+k);
-        for(i=0; i<size; i++){
-            pLocalData += i*size;
-            for(j=0; j<size; j++){
-                *(sm->pData+ j+ i*size) = (*(pLocalData+j)) * data;
-            }
+    unsigned short i=0, j=0;
+    
+    for(i=0; i<size; i++){
+        for(j=0; j<size; j++){
+            *(sm->pData+i*size+j) = *(pData+j) * (*(pData+i));
         }
-    }    
+    }   
 }
 
 /**
@@ -351,34 +363,95 @@ static void unit_ckf_transform(MATRIX_F32_STRUCT* sm_sigmas_f, \
     //P = np.zeros((n, n))
     //xf = x.flatten(); // 2x1 ===> 1,1
     float *pxf = sa_x->pData;
-    // 用于临时存储矩阵内存计算的结果， 在函数结尾处需要 free 内存。
+    // @2018-12-18 临时存储矩阵内存计算的结果， 需要在函数结尾处 free 内存。
     MATRIX_F32_STRUCT smTmpXs, smTmpxf;
-    unsigned short size = sa_x->numRows*sa_x->numRows*sa_x->numCols*sa_x->numCols;
+    unsigned short size = sa_x->numRows*sa_x->numCols;
     eye(&smTmpXs, size, size);
     eye(&smTmpxf, size, size);
     // 需要全部清零
     memset(sm_P->pData, 0, sm_P->numRows*sm_P->numCols);
     for(i=0; i<mRow; i++){
         // 内积
-        unit_ckf_matrix_outer((sm_sigmas_f->pData+ i*sm_sigmas_f->numCols), sm_sigmas_f->numCols, &smTmpXs);
-        unit_ckf_matrix_outer((sa_x->pData+ i*sa_x->numCols), sa_x->numCols, &smTmpxf);
+        unit_ckf_matrix_outer((sm_sigmas_f->pData+ i*sm_sigmas_f->numCols), size, &smTmpXs);
+        unit_ckf_matrix_outer((sa_x->pData/*+ i*sa_x->numCols*/), size, &smTmpxf);
         // P + 矩阵加
+        for(j=0; j<(sm_P->numRows*sm_P->numCols); j++){
+            *(sm_P->pData+j) += *(smTmpXs.pData+j) - (*(smTmpxf.pData+j));
+        }
+    }
+
+    for(j=0; j<(sm_P->numRows*sm_P->numCols); j++){
+        *(sm_P->pData+j) /= mRow;
+        *(sm_P->pData+j) += *(sm_Q->pData+j); // P、Q 行列个数相等
     }
     // Need free { MATRIX_F32_STRUCT smTmpXs, smTmpxf; } Memory.
 }
+
+/**
+ * Get the first Item of every Row.
+ * ----------
+ */
+static void unit_ckf_hx(MATRIX_F32_STRUCT* sm)
+{
+
+}
+
+/**
+ * Inverse Square-MATRIX. Compute the Inverse Square-MATRIX of smSrc, and save smDest.
+ * ----------
+ * Parameters
+ * smSrc : MATRIX_F32_STRUCT*
+ *  the source of matrix pointer.
+ * smDest : MATRIX_F32_STRUCT*
+ *  the destination of matrix pointer.
+ */
+static void unit_ckf_inverse(MATRIX_F32_STRUCT* smSrc, MATRIX_F32_STRUCT* smDest)
+{
+
+}
+
+/**
+ * Update the CKF with the given measurements. On return, self.x
+ * and self.P contain the new mean and covariance of the filter.
+ * ----------
+ * Important: predict() MUST be called before update() is called for the first time.
+ */
+static void unit_ckf_update()
+{
+    unsigned short i=0;
+    //sCKF.saX
+    for(i=0; i<sCKF._num_sigmas; i++){
+        // self.sigmas_h[k] = self.hx(self.sigmas_f[k], *hx_args)
+        // Now sm_sigmas_h is 4x1, 
+        // Get the first Item of every Row. == unit_ckf_hx()
+        *(sCKF.sm_sigmas_h.pData+i) = *(sCKF.sm_sigmas_f.pData+i*sCKF.sm_sigmas_f.numCols);
+    }
+
+    //# mean and covariance of prediction passed through unscented transform.
+    //zp, self.S = ckf_transform(self.sigmas_h, R)
+    MATRIX_F32_STRUCT zp; // Local var, and Malloc Memory, then later must be Free Memroy manully.
+    eye(&zp, sCKF.sm_sigmas_h.numRows, 1); // sm_sigmas_h : 4x1,
+    unit_ckf_transform(&sCKF.sm_sigmas_h, &sCKF.smR, &zp, &sCKF.smS);
+    //# self.SI = inv(self.S)
+    unit_ckf_inverse(&sCKF.smS, &sCKF.smSI); // Get the Inverse.
+    
+
+    //# compute cross variance of the state and the measurements.
+    
+}
+
 /**
  * Test Func.
  * ----------
  */
+#if 1
 void main(){
     MATRIX_F32_STRUCT local_smU;
 
     CubatureKalmanFilter(2, 1, 2);
 
-	//eye(&sCKF.smP, 2, 2);
+#if 0
 	eye(&local_smU, 2, 2);
-	//eye(&sCKF.smSigma, 2, 4);
-	//eye(&sCKF.saX, 2, 1);
 		
 	*(sCKF.smP.pData) = 1;
 	*(sCKF.smP.pData+1) = -2;
@@ -401,4 +474,19 @@ void main(){
             *(sCKF.smSigma.pData+((i+2)*2+j)) = *(sCKF.saX.pData+j) - *(local_smU.pData+(i*2+j));
         }
     }
+#endif // #if 0
+
+    // Test 
+    MATRIX_F32_STRUCT smTmpXs;
+    unsigned short size = sCKF.saX.numCols*sCKF.saX.numRows;
+    eye(&smTmpXs, size, size);
+    unit_ckf_matrix_outer(sCKF.saX.pData, size, &smTmpXs);
+
+    // Test
+    for(unsigned short i=0; i<sCKF.sm_sigmas_f.numRows*sCKF.sm_sigmas_f.numCols; i++){
+       *(sCKF.sm_sigmas_f.pData+i) = i;
+    }
+    unit_ckf_update();
 } 
+#endif
+

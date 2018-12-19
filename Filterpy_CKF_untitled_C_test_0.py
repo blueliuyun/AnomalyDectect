@@ -110,9 +110,13 @@ for i in range(0, len(z02)): # range(50):
     ukf.predict()
     ukf.update(z)
     xs.append(ukf.x[0])
-    zs.append(z)
+    '''
+    for j in range(0, len(ukf.x)):
+        print("j=%d    ukf.x=%f" % (j, ukf.x[j]))
+    '''
+    #zs.append(z)
 
-plt.figure(figsize=(32, 6))    
+plt.figure(figsize=(32, 6))
 plt.plot(xs)
 #plt.plot(zs, marker='x', ls='')
 plt.plot(z02)

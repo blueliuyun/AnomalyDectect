@@ -353,6 +353,8 @@ static void unit_ckf_transform(MATRIX_F32_STRUCT* sm_sigmas_f, \
     nCol = sm_sigmas_f->numCols;
        
     // s1===> Xs : 4x2     s2===> x = sum(Xs, 0)[:, None] / m     s3===> x : 2x1
+    // so, if s1===> sm_sigmas_f_h : 4x2_1     s2===> x = sum(Xs, 0)[:, None] / m     s3===> x : 2x1__1x1
+    // thus, x.rows is == Xs.cols, and x.cols == 1.
     for(i=0; i<nCol; i++){
         for(j=0; j<mRow; j++){
             *(sa_x->pData+i) += *(sm_sigmas_f->pData + j*nCol + i);    
@@ -397,6 +399,45 @@ static void unit_ckf_hx(MATRIX_F32_STRUCT* sm)
 }
 
 /**
+ * Calc |Matrix| . Used for Inverse Square-MATRIX.
+ * ----------
+ * 1. When Call this func , must check the return value |Matrix| != 0
+ * 2. In this func Rows==Cols .
+ * ----------
+ * Parameters
+ * size : unsigned short
+ *  In this func Rows==Cols==size .
+ */
+static float unit_ckf_calc_matrix_rank(float* pData, unsigned short size)
+{
+    unsigned short i=0, j=0, k=0;
+    if(size==1) {
+        return *(pData);
+    }
+
+    float retValue = 0.0;
+    float* pLocalData = (float*)malloc(size*size*sizeof(float));
+    memset(pLocalData, 0.0, (size*size*sizeof(float)));
+    
+    for(i=0; i<size; i++){
+        for(j=0; j<size-1; j++){
+            for(k=0; k<size-1; k++){
+                *(pLocalData+ j*(size-1)+ k) = *( pData+ (j+1)*(size) + ((k>=i)?k+1:k));                
+            }
+        }
+        float tmpValue = unit_ckf_calc_matrix_rank((float*)pLocalData, size-1);
+        if(i%2 == 0){
+            retValue += *(pData+i) * tmpValue;
+        } else {
+            retValue -= *(pData+i) * tmpValue;
+        }
+    }
+
+    free(pLocalData); // Deallocate memory
+    return retValue;
+}
+
+/**
  * Inverse Square-MATRIX. Compute the Inverse Square-MATRIX of smSrc, and save smDest.
  * ----------
  * Parameters
@@ -407,7 +448,106 @@ static void unit_ckf_hx(MATRIX_F32_STRUCT* sm)
  */
 static void unit_ckf_inverse(MATRIX_F32_STRUCT* smSrc, MATRIX_F32_STRUCT* smDest)
 {
+    if((smSrc->numRows!=smSrc->numCols) || (smDest->numRows!=smDest->numCols)){
+        return; // error, Matrix must be square.
+    }
+    // Check |Matrix| != 0
+    float fRank = 0.0;
+    fRank = unit_ckf_calc_matrix_rank((float*)smSrc->pData, smSrc->numRows);
+    if(0 == fRank){
+        return; // error, fRank must not be 0.
+    }
 
+    unsigned short i=0, j=0, k=0, t=0;
+    unsigned short size = smDest->numRows;
+    if(1 == size){
+        *(smDest->pData) /= fRank;
+        return;
+    }
+    float* pLocalData = (float*)malloc(size*size*sizeof(float));
+    memset(pLocalData, 0.0, (size*size*sizeof(float)));
+    // 计算每一行每一列的每个元素所对应的余子式，组成 A* 
+    for(i=0; i<size; i++){
+        for(j=0; j<size; j++){
+            for(k=0; k<(size-1); k++){
+                for(t=0; t<(size-1); t++){
+                    *(pLocalData + k*(size-1)+ t) = *(smSrc->pData + (k>=i?k+1:k)*size + (t>=j?t+1:t));                    
+                }
+            }
+            *(smDest->pData+ j*size+ i) = unit_ckf_calc_matrix_rank((float*)pLocalData, size-1) / fRank;
+            if((i+j)%2 == 1){
+                *(smDest->pData+ j*size+ i) = - *(smDest->pData+ j*size+ i);
+            }
+        }
+    }
+    // Must release Memroy.
+    free(pLocalData);
+}
+
+/**
+ * Computes the sum of the outer products of the rows in A and B
+ * ----------
+ * Parameters
+ * pDataC : float*
+ *  The Result Value(MxN) Address.
+ * &rowC : unsigned short
+ *  [Out] The Result Value M, rowC== colA
+ * &colC : unsigned short
+ *  [Out] The Result Value N, colC== colB
+ */
+static void unit_ckf_outer_product_sum(float* pDataA, unsigned short rowA, unsigned short colA, \
+    float* pDataB, unsigned short rowB, unsigned short colB, \
+    float* pDataC)
+{
+    if(pDataA == NULL || pDataB == NULL || pDataC == NULL){
+        return; // error
+    }
+
+    // Used for store Outer-Matrix Processing Data
+    float* pLocalData = (float*)malloc(rowA*colA*colB*sizeof(float));
+    float* pTmpData = pLocalData; // Used for Move pointer, Now is Header.
+    memset(pLocalData, 0.0, (rowA*colA*colB*sizeof(float)));
+    
+    //... ...
+    unsigned short i=0, j=0, k=0, h=0;
+    //for(i=0; i<(rowA*colA); i++){
+        for(j=0; j<rowB; j++){ // 矩阵 rowA == rowB
+            for(h=0; h<colA; h++){
+                float dataA = *(pDataA + j*colA + h);                
+                for(k=0; k<colB; k++){
+                    *(pTmpData++) = *(pDataB+ j*colB + k) * dataA;
+                }
+            }
+        }
+    //}
+
+    pTmpData = pLocalData; // Used for Move pointer, Now is Header.
+    for(i=0; i<colA; i++){
+        for(j=0; j<colB; j++){            
+            for(k=0; k<rowA; k++){
+                *(pDataC+ i*colB + j) += *(pTmpData + i + k*colA);
+			}
+        }        
+    }
+    
+    // Clear
+    pTmpData = NULL;
+    free(pLocalData);
+}
+
+/**
+ * Used for matrix subtraction. 
+ * matrix_A = matrix_B - matrix_C
+ * ----------
+ */
+static void unit_ckf_matrix_row_subtraction(float* pDataA, unsigned short rowA, unsigned short colA, \
+    float* pDataB, float* pDataC){
+    unsigned short i=0, j=0;
+    for(i=0; i<rowA; i++){
+        for(j=0; j<colA; j++){
+            *(pDataA + i*colA + j) = *(pDataB + i*colA + j) - *(pDataC + j);
+        }
+    }
 }
 
 /**
@@ -418,7 +558,7 @@ static void unit_ckf_inverse(MATRIX_F32_STRUCT* smSrc, MATRIX_F32_STRUCT* smDest
  */
 static void unit_ckf_update()
 {
-    unsigned short i=0;
+    unsigned short i=0, j=0;
     //sCKF.saX
     for(i=0; i<sCKF._num_sigmas; i++){
         // self.sigmas_h[k] = self.hx(self.sigmas_f[k], *hx_args)
@@ -430,14 +570,68 @@ static void unit_ckf_update()
     //# mean and covariance of prediction passed through unscented transform.
     //zp, self.S = ckf_transform(self.sigmas_h, R)
     MATRIX_F32_STRUCT zp; // Local var, and Malloc Memory, then later must be Free Memroy manully.
-    eye(&zp, sCKF.sm_sigmas_h.numRows, 1); // sm_sigmas_h : 4x1,
+    eye(&zp, sCKF.sm_sigmas_h.numCols, 1); // sm_sigmas_h : 4x1,
     unit_ckf_transform(&sCKF.sm_sigmas_h, &sCKF.smR, &zp, &sCKF.smS);
     //# self.SI = inv(self.S)
     unit_ckf_inverse(&sCKF.smS, &sCKF.smSI); // Get the Inverse.
+
+    //# compute cross variance of the state and the measurements.    
+    unsigned short m = sCKF._num_sigmas;
+    //# xf = self.x.flatten() // self.x is { sax } 2x1
+    //# { self.sigmas_f } is 4x2,       { self.sigmas_h } is 4x1,
+    // Pxz = outer_product_sum(self.sigmas_f - xf, self.sigmas_h - zpf) / m
+    MATRIX_F32_STRUCT Pxz;
+    // 
+    unsigned short rowA = sCKF.sm_sigmas_f.numRows;
+    unsigned short colA = sCKF.sm_sigmas_f.numCols;
+    unsigned short rowB = sCKF.sm_sigmas_h.numRows;
+    unsigned short colB = sCKF.sm_sigmas_h.numCols;
+    unsigned short rowC = colA, colC = colB;
+    float* pLocalDataA = (float*)malloc(rowA*colA*rowB*sizeof(float));
+    memset(pLocalDataA, 0.0, (rowA*colA*rowB*sizeof(float)));
+    float* pLocalDataB = (float*)malloc(rowA*colA*rowB*sizeof(float));
+    memset(pLocalDataB, 0.0, (rowA*colA*rowB*sizeof(float)));
+    eye(&Pxz, colA, colB); // Pxz : colA x colB
+    // Renew ... rows and cols... == self.sigmas_f - xf   
+    // ===  *(sCKF.sm_sigmas_f.pData + i*rowA + colA) - *(sCKF.saX.pData + colA);
+#if 0
+    for(i=0; i<rowA; i++){
+        for(j=0; j<colA; j++){
+            *(pLocalDataA + i*rowA + colA) = \
+            *(sCKF.sm_sigmas_f.pData + i*rowA + colA) - *(sCKF.saX.pData + colA);
+        }
+    }
+
+    // Renew ... rows and cols... == self.sigmas_h - zpf
+    // === *(sCKF.sm_sigmas_h.pData + i*rowB + colB) - *(zp.pData + colB);
+
+    for(i=0; i<rowB; i++){
+        for(j=0; j<colB; j++){
+            *(pLocalDataB + i*rowB + colB) = \
+            *(sCKF.sm_sigmas_h.pData + i*rowB + colB) - *(zp.pData + colB);
+        }
+    }
+#endif //#if 0
+    // Renew ... rows and cols... == self.sigmas_f - xf   ==== 4x2-1x2
+    // ===  *(sCKF.sm_sigmas_f.pData + i*rowA + colA) - *(sCKF.saX.pData + colA);
+    unit_ckf_matrix_row_subtraction(pLocalDataA, rowA, colA, sCKF.sm_sigmas_f.pData, sCKF.saX.pData);
+    // Renew ... rows and cols... == self.sigmas_h - zpf  === 4x1-1x1
+    // === *(sCKF.sm_sigmas_h.pData + i*rowB + colB) - *(zp.pData + colB);
+    unit_ckf_matrix_row_subtraction(pLocalDataB, rowB, colB, sCKF.sm_sigmas_h.pData, zp.pData);    
+
+    unit_ckf_outer_product_sum(pLocalDataA, rowA, colA, pLocalDataB, rowB, colB, Pxz.pData);
+    
+    for(i=0; i<rowC*colC; i++){
+        *(Pxz.pData + i) /= m;
+    }
+    //# Kalman gain
+    // self.K = dot(Pxz, self.SI)
+    //# residual
     
 
-    //# compute cross variance of the state and the measurements.
-    
+    // Need to be Free Loval Var zp Memroy !!!
+    free(pLocalDataA);
+    free(pLocalDataB);
 }
 
 /**
@@ -446,13 +640,12 @@ static void unit_ckf_update()
  */
 #if 1
 void main(){
-    MATRIX_F32_STRUCT local_smU;
+    //MATRIX_F32_STRUCT local_smU;
+    //eye(&local_smU, 3, 3);
 
     CubatureKalmanFilter(2, 1, 2);
 
-#if 0
-	eye(&local_smU, 2, 2);
-		
+#if 0			
 	*(sCKF.smP.pData) = 1;
 	*(sCKF.smP.pData+1) = -2;
 	*(sCKF.smP.pData+2) = 2;
@@ -482,11 +675,62 @@ void main(){
     eye(&smTmpXs, size, size);
     unit_ckf_matrix_outer(sCKF.saX.pData, size, &smTmpXs);
 
-    // Test
+    // Test --- unit_ckf_update()
     for(unsigned short i=0; i<sCKF.sm_sigmas_f.numRows*sCKF.sm_sigmas_f.numCols; i++){
        *(sCKF.sm_sigmas_f.pData+i) = i;
     }
-    unit_ckf_update();
-} 
+    // unit_ckf_update();
+
+#if 0
+    // Test --- unit_ckf_inverse() --- [Begin] ok
+    //for(unsigned short i=0; i<sCKF.smS.numRows*sCKF.smS.numCols; i++){
+    //  *(sCKF.smS.pData+i) = i+1;
+    //}
+    //for(unsigned short i=0; i<local_smU.numRows*local_smU.numCols; i++){
+    //  *(local_smU.pData+i) = i+1;
+    //}
+    MATRIX_F32_STRUCT local_smU;
+    eye(&local_smU, 3, 3);
+    *(local_smU.pData) = 9;
+	*(local_smU.pData+1) = 1;
+	*(local_smU.pData+2) = 2;
+	*(local_smU.pData+3) = 4;
+	*(local_smU.pData+4) = 5;
+	*(local_smU.pData+5) = 6;
+	*(local_smU.pData+6) = 1;
+	*(local_smU.pData+7) = 8;
+	*(local_smU.pData+8) = 9;
+    MATRIX_F32_STRUCT local_smSI;
+    eye(&local_smSI, 3, 3);
+    unit_ckf_inverse(&local_smU, &local_smSI); //&sCKF.smSI); // Get the Inverse.
+    // Test --- unit_ckf_inverse() --- [End] ok
+#endif
+
+    // Test --- unit_ckf_outer_product_sum() --- [Begin]
+    MATRIX_F32_STRUCT local_smUA;
+    eye(&local_smUA, 4, 2);
+    *(local_smUA.pData) = 9;
+	*(local_smUA.pData+1) = 1;
+	*(local_smUA.pData+2) = 2;
+	*(local_smUA.pData+3) = 4;
+	*(local_smUA.pData+4) = 5;
+	*(local_smUA.pData+5) = 6;
+	*(local_smUA.pData+6) = 1;
+	*(local_smUA.pData+7) = 8;
+    MATRIX_F32_STRUCT local_smUB;
+    eye(&local_smUB, 1, 2);
+    *(local_smUB.pData) = 9;
+	*(local_smUB.pData+1) = 1;
+	//*(local_smUB.pData+2) = 2;
+	//*(local_smUB.pData+3) = 4;
+    MATRIX_F32_STRUCT local_smUC;
+    //eye(&local_smUC, local_smUA.numCols, local_smUB.numCols); // local_smUC : colA x colB
+    //unit_ckf_outer_product_sum(local_smUA.pData, 4, 2, local_smUB.pData, 4, 1, local_smUC.pData);
+    // Test --- unit_ckf_outer_product_sum() --- [End]
+    // Test --- unit_ckf_matrix_row_subtraction() --- [Begin]
+    eye(&local_smUC, 4, 2); // local_smUC : 4 x 2
+    unit_ckf_matrix_row_subtraction(local_smUC.pData, 4, 2, local_smUA.pData, local_smUB.pData);
+
+}
 #endif
 

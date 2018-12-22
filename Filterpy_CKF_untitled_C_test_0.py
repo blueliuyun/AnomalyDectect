@@ -104,12 +104,17 @@ z01 = np.array([ 1, 1, 0, 1, 2, 1, 1, 1, 1, 1, 1, 2, 2, 3, 1, 2, 1, 1, 2, 2, 2, 
 
 z02 = z01[500:1500]
 dataU1 = dataU0#[200:900]
+xK, xS, xSI = [], [], []
+
 for i in range(0, len(z02)): # range(50):
     #z = i + randn()*.5
     z = z02[i]
     ukf.predict()
     ukf.update(z)
     xs.append(ukf.x[0])
+    xK.append(ukf.K)
+    xS.append(ukf.S)
+    xSI.append(ukf.SI)
     '''
     for j in range(0, len(ukf.x)):
         print("j=%d    ukf.x=%f" % (j, ukf.x[j]))
@@ -126,11 +131,6 @@ plt.grid(True)
 ############
 t1 = np.array([[None]*1]).T
 print(t1)
-
-a = np.array([[3]])
-b = np.array([[1, 2, 5],[3, 4, 7]])
-c = np.array([[1, 2],[3, 4]]).T
-
 
 ##########################################################
 def outer_product_sum(A, B=None):
@@ -191,9 +191,10 @@ aa = array([[9,1],[2,4],[5,6],[1,8]])
 #bb = array([[1, 2],[2, 5],[3, 7],[5, 9]]) # 2
 bb = array([[9],[1],[2],[4]]) # 1
 cc = array([[1,-2],[2,5],[3,6],[8,9]])
-dd = array([1,2])
-ff = array([1])
-gg = array([1, 2, 3, 4])
+dd = array([[9, 21],[12, 2]])
+ff = array([[9, 1]]) #,[2, 4]])
+gg = array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+hh = array([[5],[9]])
 #L = linalg.cholesky(aa, lower=False)
 ee = outer_product_sum(aa, bb)
 

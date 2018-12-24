@@ -61,6 +61,7 @@ static void eyeE(MATRIX_F32_STRUCT* s, unsigned short nRow, unsigned short nCol)
 static unsigned short GetIndexInMatrix(MATRIX_F32_STRUCT* sm, unsigned short row, unsigned short col);
 static void unit_ckf_transform(MATRIX_F32_STRUCT* sm_sigmas_f, \
     MATRIX_F32_STRUCT* sm_Q, MATRIX_F32_STRUCT* sa_x/*Array*/, MATRIX_F32_STRUCT* sm_P);
+static void unit_ckf_predict();
 
 /**
  * Init
@@ -866,7 +867,7 @@ void unit_ckf_process(short *pSampData , short nLenSamp, /*short*/float *pSampDa
  * Test Func.
  * ----------
  */
-#if 1
+#if 0
 void main(){   
 
 #if 0

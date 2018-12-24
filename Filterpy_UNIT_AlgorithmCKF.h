@@ -2,7 +2,6 @@
 #ifndef UNIT_ALGORITHM_CKF_H
 #define UNIT_ALGORITHM_CKF_H
 
-void CubatureKalmanFilter(unsigned short nDim_x, unsigned short nDim_z, unsigned short nDt);
-
+void unit_ckf_process(short *pSampData , short nLenSamp, /*short*/float *pSampDataNew);
 
 #endif // UNIT_ALGORITHM_CKF_H

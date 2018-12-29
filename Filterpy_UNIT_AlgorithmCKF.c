@@ -12,6 +12,8 @@
 /**
  * 
  */
+float gfMemTest[1664];
+
 /// @brief Use Memroy in SDRAM for Global Matrix, Instead of malllc()
 #define MEM_AREA_SIZE 128
 float gfMemArea[MEM_AREA_SIZE];
@@ -83,6 +85,8 @@ static unsigned short GetIndexInMatrix(MATRIX_F32_STRUCT* sm, unsigned short row
 static void unit_ckf_transform(MATRIX_F32_STRUCT* sm_sigmas_f, \
     MATRIX_F32_STRUCT* sm_Q, MATRIX_F32_STRUCT* sa_x/*Array*/, MATRIX_F32_STRUCT* sm_P);
 static void unit_ckf_predict(void);
+
+void unit_ckf_test_case_print(short nLenSamp);
 
 /**
  * Init
@@ -979,9 +983,15 @@ void unit_ckf_process(short *pSampData , short nLenSamp, /*short*/float *pSampDa
     if((NULL == pSampData) || (nLenSamp <= 0) || (NULL == pSampDataNew)){
         return; //error
     }
-
+     
     unsigned short i=0;
     unsigned short dim_x=2, dim_z=1, dt=2;
+    
+    // Test and Print Input Data
+    for(i=0; i<nLenSamp; i++){
+    	gfMemTest[i] = *(pSampData + i);
+	}
+	unit_ckf_test_case_print(nLenSamp);
     
     unit_ckf_CubatureKalmanFilter(dim_x, dim_z, dt);
     //*(sCKF.smP.pData) = 33.5;
@@ -1020,11 +1030,27 @@ void unit_ckf_process(short *pSampData , short nLenSamp, /*short*/float *pSampDa
 /**
  * Test Case Func.
  * ----------
+ * Output : Print the Input Data.
+ */
+void unit_ckf_test_case_print(short nLenSamp)
+{
+	unsigned short i=0;
+    for(i=0; i<nLenSamp; i++){
+    	printf("INPUT i==%d and %f \r\n", i, gfMemTest[i]);
+	}
+    
+    return;
+}
+
+/**
+ * Test Case Func.
+ * ----------
  * Output : Hello, world.
  */
 void unit_ckf_test_case()
 {
-    printf("Hello, world. This is C code.\r\n");
+    printf("Hello, world. This is C code. 2018-12-26 19:21 \r\n");
+    return;
 }
 
 /**

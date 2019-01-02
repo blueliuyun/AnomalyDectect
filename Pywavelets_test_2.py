@@ -68,8 +68,8 @@ plt.xlabel(u"time(s)")
 #plt.subplots_adjust(hspace=0.4)
 plt.grid(True)
 
-x1 = pywt.upcoef('a', cwtmatr, 'db2')
-y1 = pywt.upcoef('d', frequencies, 'db2')
+x1 = pywt.upcoef('a', cwtmatr, 'db4')
+y1 = pywt.upcoef('d', frequencies, 'db4')
 z1 = x1+y1
 plt.subplot(313)
 #plt.plot(np.arange(1, len(z1)+1), z1)

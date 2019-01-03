@@ -20,7 +20,7 @@ asData = [0]
 asTime = [0]
 
 my_detector = AnomalyDetector(
-        time_series='./SAR-device.sdb.await__2017-07-20 第五项检测L7 区内消弧线圈 1000欧 C相__U0.csv',
+        time_series='./SAR-device.sdb.await__2017-07-20 第五项检测L7 区内消弧线圈 1000欧 C相__U0 - SSS.csv',
         score_threshold=0.1, #1.0,
         algorithm_name='derivative_detector')#derivative_detector'exp_avg_detector#'bitmap_detector)#, algorithm_params = {'smoothing factor': 0.2, 'lag_window_size': 64 })
 

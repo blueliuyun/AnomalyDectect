@@ -978,7 +978,7 @@ static void unit_ckf_Q_discrete_white_noise(MATRIX_F32_STRUCT *smLocalQ, /*unsig
  * pSampDataNew : short*
  *     [Out] 滤波后的数据用于判别极性，并且是 float 强制转换为 short，为保留精度，所以扩大10倍。
  */
-void unit_ckf_process(short *pSampData , short nLenSamp, /*short*/float *pSampDataNew)
+void unit_ckf_process(/*short*/float *pSampData , short nLenSamp, /*short*/float *pSampDataNew)
 {
     if((NULL == pSampData) || (nLenSamp <= 0) || (NULL == pSampDataNew)){
         return; //error
@@ -1057,7 +1057,7 @@ void unit_ckf_test_case()
  * Test Func.
  * ----------
  */
-#if 1
+#if 0
 void main(){   
 
 #if 0

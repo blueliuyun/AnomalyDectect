@@ -205,8 +205,61 @@ unsigned short unit_detect_anomalies(void)
         // 1. MAX-Score 不应该落在前 3 个周波内，所以 Fetal error .
         return 0; 
     }else if(384<=stCycleAll.nIndex  && stCycleAll.nIndex<=639){
-        // 2. 如果 MAX-Score 存在在第4~5周波内，则该MAX-Score就是U0的故障起点。
-        return stCycleAll.nIndex;
+        // 2. ××× 如果 MAX-Score 存在在第4~5周波内，则该MAX-Score就是U0的故障起点。 
+        //    ××× @2019-01-09 验证波形 SAR-device.sdb.await__PDZ810_20190108__981_BAY01_0219_20181126_060056_456__U0 时此种情况不成立。
+        //    ×××  所以必须逐个点判别了。
+        //return stCycleAll.nIndex;
+        // 2.1 +++ @2019-01-09 优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData
+        for(i=384; i<stCycleAll.nIndex; i++){            
+            unsigned short nOverChange = 0; // 累计值，对应 j 值            
+            // 2.1.1 如果 stCycleFstSecThd.fData=0, 则说明前三个周波的采样点很平滑且无波动, 所以需要先找到一个 !=0 的导数值。
+            if(0==gfMemScore[i]){
+                continue;
+            }
+            if( (0==stCycleFstSecThd.fData) && (gfMemScore[i]!=0) ){
+                stCycleFstSecThd.fData = gfMemScore[i];
+            }//[End] 2.1.1 
+
+            for(j=0; j<3; j++){
+                if(gfMemScore[i+j] > 1.2*stCycleFstSecThd.fData){
+                    nOverChange++;
+                }
+            }
+            if((nOverChange >= 3) && (gfMemScore[i] <= gfMemScore[i+1])){
+                // When nOverChange==3, find the MAX-Point, otherwise nOverChange<3 .
+                // and [i] <= [i+1]
+                // If find the MAX-Point, return the Index of U0[i].
+                //break;
+                return i;
+            }
+            nOverChange = 0; // 清零，准备下一次的 j 循环。
+        }
+
+        // 2.2 +++ @2019-01-09 如果，没有 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData， 则寻找连续 2 个点大于 1.2 倍 stCycleFstSecThd.fData
+        for(i=384; i<stCycleAll.nIndex; i++){
+            unsigned short nOverChange = 0; // 累计值，对应 j 值
+            // 2.2.1 如果 stCycleFstSecThd.fData=0, 则说明前三个周波的采样点很平滑且无波动, 所以需要先找到一个 !=0 的导数值。
+            if(0==gfMemScore[i]){
+                continue;
+            }
+            if( (0==stCycleFstSecThd.fData) && (gfMemScore[i]!=0) ){
+                stCycleFstSecThd.fData = gfMemScore[i];
+            }//[End] 2.2.1 
+
+            for(j=0; j<2; j++){
+                if(gfMemScore[i+j] > 1.2*stCycleFstSecThd.fData){
+                    nOverChange++;
+                }
+            }
+            if((nOverChange >= 2) && (gfMemScore[i] <= gfMemScore[i+1])){
+                // When nOverChange==2, find the MAX-Point, otherwise nOverChange<2 .
+                // and [i] <= [i+1]
+                // If find the MAX-Point, return the Index of U0[i].
+                //break;
+                return i;
+            }
+            nOverChange = 0; // 清零，准备下一次的 j 循环。
+        }
     }else if(640<=stCycleAll.nIndex && stCycleAll.nIndex<1664){
         // 3. 如果，在 13 个周波内，MAX-Score 不在第4~5周波内，且出现在第5个周波之后。
         //    优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData

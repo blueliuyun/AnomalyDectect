@@ -93,7 +93,7 @@ for nIndex in range(len(U0_Lubo_Sample_Send_Ch_Calu)-NUM_SIMPLES_PERCYCLE6):
     AA[1] = abs(asData[1])
     AA[2] = abs(asData[2])
     AA[3] = abs(asData[3])
-    dSA[0] = abs(AA[0]+AA[2]-AA[1]-AA[1]);
+    dSA[0] = abs(AA[0]+AA[2]-AA[1]-AA[1])
     dSA[1] = abs(AA[1]+AA[3]-AA[2]-AA[2])
     nDS_U0_prev.append(dSA[0])
     nDS_U0.append(dSA[1])

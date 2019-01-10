@@ -211,107 +211,85 @@ unsigned short unit_detect_anomalies(void)
         //return stCycleAll.nIndex;
         // 2.1 +++ @2019-01-09 优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData
         for(i=384; i<stCycleAll.nIndex; i++){            
-            unsigned short nOverChange = 0; // 累计值，对应 j 值            
+            unsigned short nOverChangeAvg = 0;   // 累计平均值，对应 j 值
+            unsigned short nOverChangeFirst = 0; // 当前值的 Score 大于 1.2 倍  
+            float f_local_sum = 0;  // 计算平均值的临时变量
+
             // 2.1.1 如果 stCycleFstSecThd.fData=0, 则说明前三个周波的采样点很平滑且无波动, 所以需要先找到一个 !=0 的导数值。
             if(0==gfMemScore[i]){
                 continue;
             }
             if( (0==stCycleFstSecThd.fData) && (gfMemScore[i]!=0) ){
-                stCycleFstSecThd.fData = gfMemScore[i];
+                //stCycleFstSecThd.fData = gfMemScore[i];
+                return i; // 返回第一个非0的导数值。
             }//[End] 2.1.1 
 
-            for(j=0; j<3; j++){
-                if(gfMemScore[i+j] > 1.2*stCycleFstSecThd.fData){
-                    nOverChange++;
+            if(gfMemScore[i] > 1.2*stCycleFstSecThd.fData){
+                nOverChangeFirst = 1;
+                for(j=0; j<3; j++){
+                    f_local_sum += gfMemScore[i+j-1];                
+                }
+                if(f_local_sum/3 > 1.1*stCycleFstSecThd.fData){
+                    nOverChangeAvg = 1;
                 }
             }
-            if((nOverChange >= 3) && (gfMemScore[i] <= gfMemScore[i+1])){
+
+            if((nOverChangeAvg >= 1) && (gfMemScore[i-1] <= gfMemScore[i])){
                 // When nOverChange==3, find the MAX-Point, otherwise nOverChange<3 .
                 // and [i] <= [i+1]
                 // If find the MAX-Point, return the Index of U0[i].
                 //break;
                 return i;
-            }
-            nOverChange = 0; // 清零，准备下一次的 j 循环。
-        }
-
-        // 2.2 +++ @2019-01-09 如果，没有 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData， 则寻找连续 2 个点大于 1.2 倍 stCycleFstSecThd.fData
-        for(i=384; i<stCycleAll.nIndex; i++){
-            unsigned short nOverChange = 0; // 累计值，对应 j 值
-            // 2.2.1 如果 stCycleFstSecThd.fData=0, 则说明前三个周波的采样点很平滑且无波动, 所以需要先找到一个 !=0 的导数值。
-            if(0==gfMemScore[i]){
-                continue;
-            }
-            if( (0==stCycleFstSecThd.fData) && (gfMemScore[i]!=0) ){
+            }else if(nOverChangeFirst >= 1){
+                // 仅更新待比较的 Score 值
                 stCycleFstSecThd.fData = gfMemScore[i];
-            }//[End] 2.2.1 
+            }
 
-            for(j=0; j<2; j++){
-                if(gfMemScore[i+j] > 1.2*stCycleFstSecThd.fData){
-                    nOverChange++;
-                }
-            }
-            if((nOverChange >= 2) && (gfMemScore[i] <= gfMemScore[i+1])){
-                // When nOverChange==2, find the MAX-Point, otherwise nOverChange<2 .
-                // and [i] <= [i+1]
-                // If find the MAX-Point, return the Index of U0[i].
-                //break;
-                return i;
-            }
-            nOverChange = 0; // 清零，准备下一次的 j 循环。
+            nOverChangeAvg = 0; // 清零，准备下一次的 j 循环。
+            nOverChangeFirst = 0;
         }
     }else if(640<=stCycleAll.nIndex && stCycleAll.nIndex<1664){
-        // 3. 如果，在 13 个周波内，MAX-Score 不在第4~5周波内，且出现在第5个周波之后。
-        //    优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData
+        // DEL---3. 如果，在 13 个周波内，MAX-Score 不在第4~5周波内，且出现在第5个周波之后。
+        // DEL---   优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData
         for(i=384; i<640; i++){            
-            unsigned short nOverChange = 0; // 累计值，对应 j 值            
-            // 3.0.1 如果 stCycleFstSecThd.fData=0, 则说明前三个周波的采样点很平滑且无波动, 所以需要先找到一个 !=0 的导数值。
-            if(0==gfMemScore[i]){
-                continue;
-            }
-            if( (0==stCycleFstSecThd.fData) && (gfMemScore[i]!=0) ){
-                stCycleFstSecThd.fData = gfMemScore[i];
-            }//[End] 3.0.1 
+            unsigned short nOverChangeAvg = 0;   // 累计平均值，对应 j 值
+            unsigned short nOverChangeFirst = 0; // 当前值的 Score 大于 1.2 倍            
+            float f_local_sum = 0;  // 计算平均值的临时变量
 
-            for(j=0; j<3; j++){
-                if(gfMemScore[i+j] > 1.2*stCycleFstSecThd.fData){
-                    nOverChange++;
-                }
-            }
-            if((nOverChange >= 3) && (gfMemScore[i] <= gfMemScore[i+1])){
-                // When nOverChange==3, find the MAX-Point, otherwise nOverChange<3 .
-                // and [i] <= [i+1]
-                // If find the MAX-Point, return the Index of U0[i].
-                //break;
-                return i;
-            }
-            nOverChange = 0; // 清零，准备下一次的 j 循环。
-        }
-        // 3.1 如果，没有 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData， 则寻找连续 2 个点大于 1.2 倍 stCycleFstSecThd.fData
-        for(i=384; i<640; i++){
-            unsigned short nOverChange = 0; // 累计值，对应 j 值
             // 3.1.1 如果 stCycleFstSecThd.fData=0, 则说明前三个周波的采样点很平滑且无波动, 所以需要先找到一个 !=0 的导数值。
             if(0==gfMemScore[i]){
                 continue;
             }
             if( (0==stCycleFstSecThd.fData) && (gfMemScore[i]!=0) ){
-                stCycleFstSecThd.fData = gfMemScore[i];
+                //stCycleFstSecThd.fData = gfMemScore[i];
+                return i; // 返回第一个非0的导数值。
             }//[End] 3.1.1 
 
-            for(j=0; j<2; j++){
-                if(gfMemScore[i+j] > 1.2*stCycleFstSecThd.fData){
-                    nOverChange++;
+            if(gfMemScore[i] > 1.2*stCycleFstSecThd.fData){
+                nOverChangeFirst = 1;
+                for(j=0; j<3; j++){
+                    f_local_sum += gfMemScore[i+j-1];                
+                }
+                if(f_local_sum/3 > 1.1*stCycleFstSecThd.fData){
+                    nOverChangeAvg = 1;
                 }
             }
-            if((nOverChange >= 2) && (gfMemScore[i] <= gfMemScore[i+1])){
-                // When nOverChange==2, find the MAX-Point, otherwise nOverChange<2 .
+
+            if((nOverChangeAvg >= 1) && (gfMemScore[i-1] <= gfMemScore[i])){
+                // When nOverChange==3, find the MAX-Point, otherwise nOverChange<3 .
                 // and [i] <= [i+1]
                 // If find the MAX-Point, return the Index of U0[i].
                 //break;
                 return i;
+            }else if(nOverChangeFirst >= 1){
+                // 仅更新待比较的 Score 值
+                stCycleFstSecThd.fData = gfMemScore[i];
             }
-            nOverChange = 0; // 清零，准备下一次的 j 循环。
+
+            nOverChangeAvg = 0; // 清零，准备下一次的 j 循环。
+            nOverChangeFirst = 0;
         }
+        
     }else{
         return 0; //  Fetal error.
     }
@@ -354,7 +332,7 @@ void unit_unit_detect_test_case()
 /**
  * 
  */
-#if 0
+#if 1
 void main(){  
 
     // Test [Begin] --- unit_detect_calc_STD(...)

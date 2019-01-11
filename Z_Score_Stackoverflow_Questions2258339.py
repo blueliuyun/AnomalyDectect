@@ -34,6 +34,159 @@ D、缺点：
     不适用于脉冲干扰比较严重的场合；
     比较浪费RAM。
 
+
+{ // 定义全局变量
+    //---Mean & STD
+    // Settings: lag = 30, threshold = 5, influence = 0
+    // lag for the smoothing, 计算平均值的间隔点数.
+    unsigned short nLag = 128;
+    unsigned short nThreshold = 3.5;
+    // when signal: how much influence for new data? (between 0 and 1)
+    // 对当前节点做平滑，平滑系数是(0,1)，值越大越受当前值的影响。when 1 is normal influence, 0.5 is half。
+    unsigned short nInfluence = 0;
+    section("sdram0_bank3") float filteredY[Lubo_Sample_Rate] = { 0.0 };
+    section("sdram0_bank3") float avgFilter[Lubo_Sample_Rate] = { 0.0 };
+    section("sdram0_bank3") float stdFilter[Lubo_Sample_Rate] = { 0.0 };
+    float nSudPoint = 0.0;
+
+    static float std_algo(const short* fArray, unsigned short len, const float fMean);
+    static unsigned short thresholding_algo(const short* AC_Input, unsigned short nLenInput);
+}
+
+{ // wave.c 中调用。
+			if(Flag_s_UI0_PRO_NegCap == 0)	//出现电容为负超过定值标志￥￥
+			{
+#define _NEW_CODE_
+
+#ifdef _NEW_CODE_                
+				//--Find the START Point				
+				unsigned short nSudIndex = 0;
+				unsigned short i = 0;				
+				unsigned short nSudIndexCnt = 0; // if >=2 means occur Earth Fault.
+
+				nSudIndex = thresholding_algo(&U0_Lubo_Sample_Send_Ch_Calu[U0_FAULTWAVE_CHANNEL][0], Lubo_Sample_Rate);
+
+				if(0 != nSudIndex)
+				{
+					for(i=0; i<3; i++, nSudIndex++)
+					{
+						if( U0_Lubo_Sample_Send_Ch_Calu[U0_FAULTWAVE_CHANNEL][nSudIndex]*U0_Lubo_Sample_Send_Ch_Calu[I0_FAULTWAVE_CHANNEL][nSudIndex] < 0)
+						{
+							nSudIndexCnt++;
+						}
+					}
+				}
+
+				if( nSudIndexCnt >= 2 )
+				{
+					Flag_s_UI0_PRO_NegCap = 1;
+					Write_Low_To_High_PRO_SOE(BF533PARA.Line[0].SOE_Start_index+28,&PRO_State[28][0],(cRealClock_625us*5)/8);				
+				}
+				else
+				{
+					Flag_s_UI0_PRO_NegCap = 0;
+					Flag_s_UI0_PRO_TimeRecord = 0;						
+				}
+				
+				// # Dir.1 对 I0 滤波 --- Test 下面的 3 行代码本应在找到 U0 起点之后对 I0 滤波，这里仅用做代码测试。
+				//memset(gfLocalSamp, 0, Lubo_Sample_Rate*sizeof(float));
+				//unit_ckf_process(&U0_Lubo_Sample_Send_Ch_Calu[I0_FAULTWAVE_CHANNEL][0], 1500/*Lubo_Sample_Rate*/, gfLocalSamp);
+
+//#if 0 //#if 0___Counter + 3U0 SuddenChange
+				if(1)// (asOverCnt >= OVER_LIMIT_COUNT) && (nSudIndex[2] != 0xEFFF))
+				{
+					// # 已经找到了 [ U0 的突变点 ] ,接下来找 [ 方向极性 ]
+					// # Dir.1 对 I0 滤波
+					float *pfLocalSamp = (float *)malloc(Lubo_Sample_Rate*sizeof(float));
+					//memset(pfLocalSamp, 0, Lubo_Sample_Rate*sizeof(shortfloat);
+					//unit_ckf_process(&U0_Lubo_Sample_Send_Ch_Calu[I0_FAULTWAVE_CHANNEL][0], Lubo_Sample_Rate, pfLocalSamp);
+					
+					// # Dir.2 拿滤波后的 I0 点处理 [ 方向极性 ]
+					//nIndex = NUM_SIMPLES_PERCYCLE6 +  nSudIndex[1];
+					if(1)//if( U0_Lubo_Sample_Send_Ch_Calu[U0_FAULTWAVE_CHANNEL][nIndex]*U0_Lubo_Sample_Send_Ch_Calu[I0_FAULTWAVE_CHANNEL][nIndex] < 0)
+					{
+						Flag_s_UI0_PRO_NegCap = 1;
+						Write_Low_To_High_PRO_SOE(BF533PARA.Line[0].SOE_Start_index+28,&PRO_State[28][0],(cRealClock_625us*5)/8);
+						/** Clear Wave Data , for the next Fault */
+						//memset(&U0_Lubo_Sample_Send_Ch_Calu[U0_FAULTWAVE_CHANNEL], 0x00, sizeof(U0_Lubo_Sample_Send_Ch_Calu[U0_FAULTWAVE_CHANNEL]));
+						//memset(&U0_Lubo_Sample_Send_Ch_Calu[I0_FAULTWAVE_CHANNEL], 0x00, sizeof(U0_Lubo_Sample_Send_Ch_Calu[I0_FAULTWAVE_CHANNEL]));						
+					}
+					else
+					{
+						Flag_s_UI0_PRO_NegCap = 0;
+						Flag_s_UI0_PRO_TimeRecord = 0;						
+						/** Clear Wave Data , for the next Fault */
+						//memset(&U0_Lubo_Sample_Send_Ch_Calu[U0_FAULTWAVE_CHANNEL], 0x00, sizeof(U0_Lubo_Sample_Send_Ch_Calu[U0_FAULTWAVE_CHANNEL]));
+						//memset(&U0_Lubo_Sample_Send_Ch_Calu[I0_FAULTWAVE_CHANNEL], 0x00, sizeof(U0_Lubo_Sample_Send_Ch_Calu[I0_FAULTWAVE_CHANNEL]));						
+					}										
+				}
+//#endif //#if 0___Counter + 3U0 SuddenChange
+
+}
+
+section("sdram0_bank3") static float std_algo(const short* fArray, unsigned short len, const float fMean)
+{
+	unsigned short i = 0;
+	float fSum = 0.0;	
+	//float fAvg = 0.0;
+	float fRet = 0.0;
+	
+	for(i; i<len; i++){
+		fSum += (fArray[i]-fMean)*(fArray[i]-fMean);
+	}
+	//fAvg = fSum/len;
+	return fRet = sqrtf(fSum/len);
+}
+
+section("sdram0_bank3") static unsigned short thresholding_algo(const short* AC_Input, unsigned short nLenInput)
+{
+	unsigned short i = 0;
+	short aSudMatrix[3][2];	
+	unsigned short nSudIndexCnt = 0; // Must be <= 2
+	
+	if(NULL == AC_Input){
+		return 0; //error
+	}
+	// Fetch MIN
+	nLenInput = (Lubo_Sample_Rate>nLenInput ? nLenInput : Lubo_Sample_Rate);
+	memset(filteredY, 0, sizeof(filteredY));
+	memset(avgFilter, 0, sizeof(avgFilter));
+	memset(stdFilter, 0, sizeof(stdFilter));
+	memset(aSudMatrix, 0, sizeof(aSudMatrix));
+
+	for(i=0; i<nLenInput; i++){
+		filteredY[i] = AC_Input[i];
+	}
+	
+	avgFilter[nLag-1] = meanf(&filteredY[0], nLag);
+	stdFilter[nLag-1] = std_algo(&AC_Input[0], nLag, avgFilter[nLag-1]);
+	for(i=nLag; i<nLenInput; i++){
+		if(abs(filteredY[i] - avgFilter[i-1]) > nThreshold*stdFilter[i-1]){
+			filteredY[i] = nInfluence*AC_Input[i] + (1 - nInfluence)*filteredY[i-1];			
+			avgFilter[i] = meanf(&filteredY[i-nLag+1], nLag);
+			stdFilter[i] = std_algo(&AC_Input[i-nLag+1], nLag, avgFilter[i-1]);
+			
+			//If Sequence 3 point Over Limited, then Record.
+			//nSudPoint = AC_Input[i];
+			aSudMatrix[nSudIndexCnt][0] = i;
+			aSudMatrix[nSudIndexCnt][1] = AC_Input[i];
+			//nSudIndexCnt = (++nSudIndexCnt)>2? 0 : nSudIndexCnt;
+			nSudIndexCnt++;
+			if(nSudIndexCnt > 2){
+				return aSudMatrix[0][0];
+			}
+		} else {
+			filteredY[i] = AC_Input[i];
+			avgFilter[i] = meanf(&filteredY[i-nLag+1], nLag);
+			stdFilter[i] = std_algo(&AC_Input[i-nLag+1], nLag, avgFilter[i-1]);
+			if(nSudIndexCnt <=2 ){
+				memset(aSudMatrix, 0, sizeof(aSudMatrix));
+			}
+		}
+	}	
+	return 0; //error : not find
+}
+
 """
 import numpy as np
 import pylab

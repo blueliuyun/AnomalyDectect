@@ -25,6 +25,22 @@
 					//Find Max 3I0+SuddenChange
 					nDS_I0[nIndex] = dSB[1];
 				}
+				
+				
+
+/**
+ * 1. [ const short* AC_Input ] is a pointer to
+ *   U0_Lubo_Sample_Send_Ch_Calu[U0_FAULTWAVE_CHANNEL]   		 or 	U0_Lubo_Sample_Send_Ch_Calu[I0_FAULTWAVE_CHANNEL]
+ */
+section("sdram0_bank3") static void Move(short ac[],const short* AC_Input)
+{
+    //-- 4 Cyceles
+	ac[0]=AC_Input[0];
+	ac[1]=AC_Input[NUM_SIMPLES_PERCYCLE];
+	ac[2]=AC_Input[NUM_SIMPLES_PERCYCLE4];
+	ac[3]=AC_Input[NUM_SIMPLES_PERCYCLE6];
+}
+
 """
 #import matplotlib.pyplot as plt
 

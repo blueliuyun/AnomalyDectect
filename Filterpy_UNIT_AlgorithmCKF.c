@@ -911,6 +911,8 @@ static void unit_ckf_update(float fz)
     *sCKF.smZ.pData = fz;
     memcpy(sCKF.saX_post.pData, sCKF.saX.pData, sCKF.saX_post.numRows*sCKF.saX_post.numCols*sizeof(float));
     memcpy(sCKF.smP_post.pData, sCKF.smP.pData, sCKF.smP_post.numRows*sCKF.smP_post.numCols*sizeof(float));
+    
+    return;
 }
 
 

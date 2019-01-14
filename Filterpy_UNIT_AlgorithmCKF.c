@@ -41,7 +41,7 @@ typedef struct
     float *pData;     			/**< points to the data of the matrix. */
 } MATRIX_F32_STRUCT;
 
-// 1¸ö static ÀàĞÍµÄ½á¹¹Ìå
+// 1ä¸ª static ç±»å‹çš„ç»“æ„ä½“
 typedef struct{
     MATRIX_F32_STRUCT smQ;
     MATRIX_F32_STRUCT smR; // Matrix
@@ -50,7 +50,7 @@ typedef struct{
     //self.x = zeros(dim_x)
     //self.P = eyeZero(dim_x)
     MATRIX_F32_STRUCT smK; // Matrix
-    MATRIX_F32_STRUCT smKT; // Matrix.K.T £¨KµÄ×ªÖÃ£©
+    MATRIX_F32_STRUCT smKT; // Matrix.K.T ï¼ˆKçš„è½¬ç½®ï¼‰
     unsigned short dim_x;
     unsigned short dim_z;
     unsigned short dt;
@@ -102,7 +102,7 @@ void unit_ckf_test_case_print(short nLenSamp);
  */
 static void unit_ckf_CubatureKalmanFilter(unsigned short nDim_x, unsigned short nDim_z, unsigned short nDt)
 {
-    // Ã¿´ÎÊ¹ÓÃ Init Ê±¶¼ĞèÇå¿Õ static ÀàĞÍµÄ½á¹¹Ìå; @2018-12-15 ĞèÒªÓĞÑ¡ÔñµÄÇå0
+    // æ¯æ¬¡ä½¿ç”¨ Init æ—¶éƒ½éœ€æ¸…ç©º static ç±»å‹çš„ç»“æ„ä½“; @2018-12-15 éœ€è¦æœ‰é€‰æ‹©çš„æ¸…0
     //memset(&sCKF, 0, sizeof(sCKF));
 	unsigned short i=0;
 	for(i=0; i<128 /*MEM_AREA_SIZE*/; i++){
@@ -169,7 +169,7 @@ static void eyeZero(MATRIX_F32_STRUCT* s, unsigned short nRow, unsigned short nC
 
 /**
  * def eyeE(N, M=None, k=0, dtype=float, order='C'):
- * Éú³ÉÒ»¸öµ¥Î»¾ØÕó E£¬¶Ô½ÇÏßÔªËØÈ«ÊÇ 1 ¡£
+ * ç”Ÿæˆä¸€ä¸ªå•ä½çŸ©é˜µ Eï¼Œå¯¹è§’çº¿å…ƒç´ å…¨æ˜¯ 1 ã€‚
  * ----------
  * Return a 2-D array with ones on the diagonal and zeros elsewhere.
  * ----------
@@ -185,7 +185,7 @@ static void eyeE(MATRIX_F32_STRUCT* s, unsigned short nRow, unsigned short nCol)
     s->numCols = nCol;
     s->numRows = nRow;    
     unit_mat_zero_f32(s); // All is 0
-    unit_mat_diagonal_f32(s); // ¶Ô½ÇÏßÊÇ 1£¬ ÆäËûÊÇ 0 Öµ
+    unit_mat_diagonal_f32(s); // å¯¹è§’çº¿æ˜¯ 1ï¼Œ å…¶ä»–æ˜¯ 0 å€¼
 }
 
 
@@ -195,9 +195,9 @@ static void eyeE(MATRIX_F32_STRUCT* s, unsigned short nRow, unsigned short nCol)
  * ----------
  * Parameters
  * : Num of float Var, In this time want to malloc() .
- * £ºLast Position in this [] .
+ * ï¼šLast Position in this [] .
  * : The rest of Num of float Var, or Tolal Num of float Var in this [] .
- * £ºReturn, the Position float Pointer in this [] .
+ * ï¼šReturn, the Position float Pointer in this [] .
  */ 
 static float* unit_mat_malloc_tmp_memroy(unsigned short nNum, MEM_TMP_F32_STRUCT *gsMemTmp)
 {
@@ -235,9 +235,9 @@ static void unit_mat_free_tmp_memroy(unsigned short nNum, MEM_TMP_F32_STRUCT *gs
  * ----------
  * Parameters
  * : Num of float Var, In this time want to malloc() .
- * £ºLast Position in this [] .
+ * ï¼šLast Position in this [] .
  * : The rest of Num of float Var, or Tolal Num of float Var in this [] .
- * £ºReturn, the Position float Pointer in this [] .
+ * ï¼šReturn, the Position float Pointer in this [] .
  */ 
 static float* unit_mat_malloc_memroy(unsigned short nNum)
 {
@@ -323,7 +323,7 @@ static void unit_mat_add_A_B(MATRIX_F32_STRUCT* smDest, \
 
 /**
  * Compute the np.dot(matrixA, matrixB)
- * ¾ØÕóÔËËã dot(M_A, M_B) ¿ÉÄÜ!=  M_A*M_B£¬Ó¦Çø±ğ´¦Àí¡£
+ * çŸ©é˜µè¿ç®— dot(M_A, M_B) å¯èƒ½!=  M_A*M_Bï¼Œåº”åŒºåˆ«å¤„ç†ã€‚
  * ----------
  * Parameters
  * smDest : MATRIX_F32_STRUCT*
@@ -347,8 +347,8 @@ static void unit_mat_dot_A_B(MATRIX_F32_STRUCT* smDest, \
 
 /**
  * Compute the (matrixA)*(matrixB)
- * ¾ØÕóÔËËã dot(M_A, M_B) ¿ÉÄÜ!=  M_A*M_B£¬Ó¦Çø±ğ´¦Àí¡£
- * In unit_mat_AxB() ¾ØÕó A¡¢B ĞĞÁĞÓ¦ÏàµÈ£¬ÇÒ½öÊÇ¶ÔÓ¦ÔªËØÏà³Ë¡£
+ * çŸ©é˜µè¿ç®— dot(M_A, M_B) å¯èƒ½!=  M_A*M_Bï¼Œåº”åŒºåˆ«å¤„ç†ã€‚
+ * In unit_mat_AxB() çŸ©é˜µ Aã€B è¡Œåˆ—åº”ç›¸ç­‰ï¼Œä¸”ä»…æ˜¯å¯¹åº”å…ƒç´ ç›¸ä¹˜ã€‚
  * ----------
  * Parameters
  * smDest : MATRIX_F32_STRUCT*
@@ -369,7 +369,7 @@ static void unit_mat_AxB(MATRIX_F32_STRUCT* smDest, \
 /**
  * Compute the Cholesky decomposition of a matrix.
  * ----------
- * ·µ»ØÖµ¡£
+ * è¿”å›å€¼ã€‚
  */
 static void cholesky(MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smU)
 {
@@ -379,7 +379,7 @@ static void cholesky(MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smU)
 /**
  * Common code for cholesky() and cho_factor().
  * ----------
- * ·µ»ØÖµ¡£
+ * è¿”å›å€¼ã€‚
  */
 static void _cholesky(MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smU)
 {    
@@ -440,7 +440,7 @@ static void _cholesky(MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smU)
 
 /**
  * ----------
- * ·µ»ØÖµÊÇ [row][col] ÔÚÊı×éÄÚ´æÉÏµÄ Index¡£
+ * è¿”å›å€¼æ˜¯ [row][col] åœ¨æ•°ç»„å†…å­˜ä¸Šçš„ Indexã€‚
  * ----------
  * Parameters
  * sm : MATRIX_F32_STRUCT*
@@ -455,7 +455,7 @@ static unsigned short GetIndexInMatrix(MATRIX_F32_STRUCT* sm, unsigned short row
 /**
  * Creates cubature points for the the specified state and covariance.
  * ----------
- * ·µ»ØÖµÀàĞÍÊÇÊı×é¡£
+ * è¿”å›å€¼ç±»å‹æ˜¯æ•°ç»„ã€‚
  */ 
 static void unit_ckf_spherical_radial_sigmas(MATRIX_F32_STRUCT* saX, MATRIX_F32_STRUCT* smP, MATRIX_F32_STRUCT* smSigma)
 {
@@ -471,15 +471,15 @@ static void unit_ckf_spherical_radial_sigmas(MATRIX_F32_STRUCT* saX, MATRIX_F32_
     local_smU.numCols = nRows; // nRows == nCols
     local_smU.pData = (float*)unit_mat_malloc_tmp_memroy(nRows*nRows, &gsMemTmpA);
     //eyeZero(smSigma, nRows*2, nRows); // MATRIX_smSigma, 4x2
-    //@2018-12-16 Èô P ÊÇµ¥¸öÔªËØµÄ¾ØÕó, Ôò¾ØÕó P Ò»¶¨ÊÇÕı¶¨¾ØÕó¡£
+    //@2018-12-16 è‹¥ P æ˜¯å•ä¸ªå…ƒç´ çš„çŸ©é˜µ, åˆ™çŸ©é˜µ P ä¸€å®šæ˜¯æ­£å®šçŸ©é˜µã€‚
     //U = cholesky(smP) * sqrt(n)
-    _cholesky(smP, &local_smU); //@2018-12-18 _cholesky has been Checked ¡Ì
+    _cholesky(smP, &local_smU); //@2018-12-18 _cholesky has been Checked âˆš
     for(i=0; i<(local_smU.numRows*local_smU.numCols); i++){ // Now Total size == 2x2
         local_smU.pData[i] = local_smU.pData[i] * sqrt(nRows);
     }
     for(i=0; i<nRows; i++){
         for(j=0; j<nCols; j++){
-            // ¾ØÕóÔªËØÒÀ´Î¶ÔÓ¦Ïà¼Ó
+            // çŸ©é˜µå…ƒç´ ä¾æ¬¡å¯¹åº”ç›¸åŠ 
             *(smSigma->pData+(i*nRows+j)) = *(pData+j)  + *(local_smU.pData+(i*nCols+j));
             *(smSigma->pData+((i+nRows)*nCols+j)) = *(pData+j) - *(local_smU.pData+(i*nCols+j));
         }
@@ -526,8 +526,8 @@ static void unit_ckf_predict(void)
 /**
  * Compute Matrix outer.
  * ----------
- * 1. ÖØÒª£ºÇóÄÚ»ıµÄ²Ù×÷Ö®Ç°£¬MATRIX_F32_STRUCT* sm ÒªÒÑ¾­±»³õÊ¼»¯²¢·ÖÅäÁËÄÚ´æ¿Õ¼ä¡£
- * 2. MATRIX_F32_STRUCT* sm µÄÊÇ MxM Î¬¾ØÕó£¬ÆäÖĞ M = Row*Col
+ * 1. é‡è¦ï¼šæ±‚å†…ç§¯çš„æ“ä½œä¹‹å‰ï¼ŒMATRIX_F32_STRUCT* sm è¦å·²ç»è¢«åˆå§‹åŒ–å¹¶åˆ†é…äº†å†…å­˜ç©ºé—´ã€‚
+ * 2. MATRIX_F32_STRUCT* sm çš„æ˜¯ MxM ç»´çŸ©é˜µï¼Œå…¶ä¸­ M = Row*Col
  */
 static void unit_ckf_matrix_outer(float* pData, 
     unsigned short size, MATRIX_F32_STRUCT* sm)
@@ -576,7 +576,7 @@ static void unit_ckf_transform(MATRIX_F32_STRUCT* sm_sigmas_f, \
     //P = np.zeros((n, n))
     //xf = x.flatten(); // 2x1 ===> 1,1
     float *pxf = sa_x->pData;
-    // @2018-12-18 ÁÙÊ±´æ´¢¾ØÕóÄÚ´æ¼ÆËãµÄ½á¹û£¬ ĞèÒªÔÚº¯Êı½áÎ²´¦ free ÄÚ´æ¡£
+    // @2018-12-18 ä¸´æ—¶å­˜å‚¨çŸ©é˜µå†…å­˜è®¡ç®—çš„ç»“æœï¼Œ éœ€è¦åœ¨å‡½æ•°ç»“å°¾å¤„ free å†…å­˜ã€‚
     MATRIX_F32_STRUCT smTmpXs, smTmpxf;
     unsigned short size = sa_x->numRows*sa_x->numCols;
     //eyeZero(&smTmpXs, size, size);
@@ -586,13 +586,13 @@ static void unit_ckf_transform(MATRIX_F32_STRUCT* sm_sigmas_f, \
     smTmpxf.numRows = smTmpxf.numCols = size;    
     smTmpxf.pData = unit_mat_malloc_tmp_memroy(size*size, &gsMemTmpB);
 
-    // ĞèÒªÈ«²¿ÇåÁã
+    // éœ€è¦å…¨éƒ¨æ¸…é›¶
     memset(sm_P->pData, 0, sm_P->numRows*sm_P->numCols*sizeof(float));
     for(i=0; i<mRow; i++){
-        // ÄÚ»ı
+        // å†…ç§¯
         unit_ckf_matrix_outer((sm_sigmas_f->pData+ i*sm_sigmas_f->numCols), size, &smTmpXs);
         unit_ckf_matrix_outer((sa_x->pData/*+ i*sa_x->numCols*/), size, &smTmpxf);
-        // P + ¾ØÕó¼Ó
+        // P + çŸ©é˜µåŠ 
         for(j=0; j<(sm_P->numRows*sm_P->numCols); j++){
             *(sm_P->pData+j) += *(smTmpXs.pData+j) - (*(smTmpxf.pData+j));
         }
@@ -600,7 +600,7 @@ static void unit_ckf_transform(MATRIX_F32_STRUCT* sm_sigmas_f, \
 
     for(j=0; j<(sm_P->numRows*sm_P->numCols); j++){
         *(sm_P->pData+j) /= mRow;
-        *(sm_P->pData+j) += *(sm_Q->pData+j); // P¡¢Q ĞĞÁĞ¸öÊıÏàµÈ
+        *(sm_P->pData+j) += *(sm_Q->pData+j); // Pã€Q è¡Œåˆ—ä¸ªæ•°ç›¸ç­‰
     }
     
     // Need free { MATRIX_F32_STRUCT smTmpXs, smTmpxf; } Memory.   
@@ -687,7 +687,7 @@ static void unit_ckf_inverse(MATRIX_F32_STRUCT* smSrc, MATRIX_F32_STRUCT* smDest
     }
     float* pLocalData = (float*)malloc(size*size*sizeof(float));
     memset(pLocalData, 0.0, (size*size*sizeof(float)));
-    // ¼ÆËãÃ¿Ò»ĞĞÃ¿Ò»ÁĞµÄÃ¿¸öÔªËØËù¶ÔÓ¦µÄÓà×ÓÊ½£¬×é³É A* 
+    // è®¡ç®—æ¯ä¸€è¡Œæ¯ä¸€åˆ—çš„æ¯ä¸ªå…ƒç´ æ‰€å¯¹åº”çš„ä½™å­å¼ï¼Œç»„æˆ A* 
     for(i=0; i<size; i++){
         for(j=0; j<size; j++){
             for(k=0; k<(size-1); k++){
@@ -733,7 +733,7 @@ static void unit_ckf_outer_product_sum(float* pDataA, unsigned short rowA, unsig
     //... ...
     unsigned short i=0, j=0, k=0, h=0;
     
-    for(j=0; j<rowB; j++){ // ¾ØÕó rowA == rowB
+    for(j=0; j<rowB; j++){ // çŸ©é˜µ rowA == rowB
         for(h=0; h<colA; h++){
             float dataA = *(pDataA + j*colA + h);                
             for(k=0; k<colB; k++){
@@ -771,14 +771,14 @@ static void unit_ckf_matrix_row_subtraction(float* pDataA, unsigned short rowA, 
     unsigned short i=0, j=0;
 
     if(rowB != rowC){
-        // 1. ¾ØÕóB Óë ¾ØÕóC µÄ rows ²»ÏàµÈÊ±£º ¾ØÕóBµÄÃ¿ĞĞ·Ö±ğ¼õÈ¥¾ØÕóC£¨ĞĞÏòÁ¿¼õ£©
+        // 1. çŸ©é˜µB ä¸ çŸ©é˜µC çš„ rows ä¸ç›¸ç­‰æ—¶ï¼š çŸ©é˜µBçš„æ¯è¡Œåˆ†åˆ«å‡å»çŸ©é˜µCï¼ˆè¡Œå‘é‡å‡ï¼‰
         for(i=0; i<rowB; i++){
             for(j=0; j<colB; j++){
                 *(pDataA + i*colB + j) = *(pDataB + i*colB + j) - *(pDataC + j);
             }
         }
     } else {
-        // 2. ¾ØÕóB Óë ¾ØÕóC µÄ rows ÏàµÈÊ±£ºÆÕÍ¨µÄ¾ØÕó¼õ·¨¡£
+        // 2. çŸ©é˜µB ä¸ çŸ©é˜µC çš„ rows ç›¸ç­‰æ—¶ï¼šæ™®é€šçš„çŸ©é˜µå‡æ³•ã€‚
         for(i=0; i<rowB; i++){
             for(j=0; j<colB; j++){
                 *(pDataA + i*colB + j) = *(pDataB + i*colB + j) - *(pDataC + i*colB + j);
@@ -808,7 +808,7 @@ static void unit_ckf_update(float fz)
     //# mean and covariance of prediction passed through unscented transform.
     //zp, self.S = ckf_transform(self.sigmas_h, R)
     MATRIX_F32_STRUCT zp; // Local var, and Malloc Memory, then later must be Free Memroy manully.
-    //eyeZero(&zp, sCKF.sm_sigmas_h.numCols, 1); // sm_sigmas_h : 4x1, So the { zp } is 1x1. @2018-12-26 ¹Ì¶¨ Data ´óĞ¡£¬²»ÔÚµ÷ÓÃ eyeZero()£¬±ÜÃâÄÚ´æ¹ÜÀí¡£
+    //eyeZero(&zp, sCKF.sm_sigmas_h.numCols, 1); // sm_sigmas_h : 4x1, So the { zp } is 1x1. @2018-12-26 å›ºå®š Data å¤§å°ï¼Œä¸åœ¨è°ƒç”¨ eyeZero()ï¼Œé¿å…å†…å­˜ç®¡ç†ã€‚
     zp.numRows = 1;
     zp.numCols = 1;
     zp.pData = unit_mat_malloc_tmp_memroy(zp.numRows*zp.numCols, &gsMemTmpC);
@@ -893,7 +893,7 @@ static void unit_ckf_update(float fz)
         tmpMat2.numCols = sCKF.smK.numRows;
         tmpMat2.pData = unit_mat_malloc_tmp_memroy(tmpMat2.numRows*tmpMat2.numCols, &gsMemTmpB);
     }
-    unit_mat_transpose_A_B(&sCKF.smKT, &sCKF.smK); // K µÄ×ªÖÃ KT
+    unit_mat_transpose_A_B(&sCKF.smKT, &sCKF.smK); // K çš„è½¬ç½® KT
     unit_mat_dot_A_B(&tmpMat2, &tmpMat, &sCKF.smKT);
     //free(tmpMat.pData);
     unit_ckf_matrix_row_subtraction( sCKF.smP.pData, sCKF.smP.numRows, sCKF.smP.numCols, \
@@ -917,16 +917,16 @@ static void unit_ckf_update(float fz)
 
 
 /**
- * ¼ÆËã³Ë·½£¬³Ë·½¾ÍÊÇÏàÍ¬ÊıÖµµÄÀÛ¼Ó¡£
+ * è®¡ç®—ä¹˜æ–¹ï¼Œä¹˜æ–¹å°±æ˜¯ç›¸åŒæ•°å€¼çš„ç´¯åŠ ã€‚
  * unit_ckf_math_exponent()
  * ----------
- * Returns ³Ë·½ µÄ½á¹û¡£
+ * Returns ä¹˜æ–¹ çš„ç»“æœã€‚
  * ----------
  * Parameters
  * nDt : unsigned short
- *     ĞèÒª±»³Ë·½ÔËËãµÄÊıÖµ¡£
- * nExp £ºunsigned short 
- *     ³Ë·½ÔËËãµÄÖ¸Êı¡£
+ *     éœ€è¦è¢«ä¹˜æ–¹è¿ç®—çš„æ•°å€¼ã€‚
+ * nExp ï¼šunsigned short 
+ *     ä¹˜æ–¹è¿ç®—çš„æŒ‡æ•°ã€‚
  */
 static float unit_ckf_math_exponent(unsigned short nDt, unsigned short nExp)
 {
@@ -955,7 +955,7 @@ static float unit_ckf_math_exponent(unsigned short nDt, unsigned short nExp)
  * fVar : float, default=1.0
  *      variance in the noise.
  * smLocalQ : MATRIX_F32_STRUCT *
- *      Maxtri smLocalQ is a MxM .ÇÒÊÇÒ»¸öµ¥Î»¾ØÕó E.
+ *      Maxtri smLocalQ is a MxM .ä¸”æ˜¯ä¸€ä¸ªå•ä½çŸ©é˜µ E.
  */
 static void unit_ckf_Q_discrete_white_noise(MATRIX_F32_STRUCT *smLocalQ, /*unsigned short nDim,*/ unsigned short nDt, float fVar)
 {
@@ -970,15 +970,15 @@ static void unit_ckf_Q_discrete_white_noise(MATRIX_F32_STRUCT *smLocalQ, /*unsig
 }
 
 /**
- * ¶ÔÍâ API £¬ÓÃÓÚµ÷ÓÃ ckf ÂË²¨¡£
+ * å¯¹å¤– API ï¼Œç”¨äºè°ƒç”¨ ckf æ»¤æ³¢ã€‚
  * ----------
  * Parameters
  * pSampData : short*
- *     [In] U0 »ò I0 µÄÔ­Ê¼²ÉÑùµã¡£
+ *     [In] U0 æˆ– I0 çš„åŸå§‹é‡‡æ ·ç‚¹ã€‚
  * nLenSamp : short
- *     [In] U0 »ò I0 µÄÔ­Ê¼²ÉÑùµãµÄÊı¾İ³¤¶È£¬Êı¾İµÄµ¥Î»ÊÇ szie_t¡£
+ *     [In] U0 æˆ– I0 çš„åŸå§‹é‡‡æ ·ç‚¹çš„æ•°æ®é•¿åº¦ï¼Œæ•°æ®çš„å•ä½æ˜¯ szie_tã€‚
  * pSampDataNew : short*
- *     [Out] ÂË²¨ºóµÄÊı¾İÓÃÓÚÅĞ±ğ¼«ĞÔ£¬²¢ÇÒÊÇ float Ç¿ÖÆ×ª»»Îª short£¬Îª±£Áô¾«¶È£¬ËùÒÔÀ©´ó10±¶¡£
+ *     [Out] æ»¤æ³¢åçš„æ•°æ®ç”¨äºåˆ¤åˆ«ææ€§ï¼Œå¹¶ä¸”æ˜¯ float å¼ºåˆ¶è½¬æ¢ä¸º shortï¼Œä¸ºä¿ç•™ç²¾åº¦ï¼Œæ‰€ä»¥æ‰©å¤§10å€ã€‚
  */
 void unit_ckf_process(/*short*/float *pSampData , short nLenSamp, /*short*/float *pSampDataNew)
 {
@@ -993,7 +993,7 @@ void unit_ckf_process(/*short*/float *pSampData , short nLenSamp, /*short*/float
     for(i=0; i<nLenSamp; i++){
     	gfMemTest[i] = *(pSampData + i);
 	}
-	unit_ckf_test_case_print(nLenSamp);
+	//unit_ckf_test_case_print(nLenSamp);
     
     unit_ckf_CubatureKalmanFilter(dim_x, dim_z, dt);
     //*(sCKF.smP.pData) = 33.5;
@@ -1031,6 +1031,7 @@ void unit_ckf_process(/*short*/float *pSampData , short nLenSamp, /*short*/float
 
 /**
  * Test Case Func.
+ * Could call this func After unit_ckf_process()
  * ----------
  * Output : Print the Input Data.
  */

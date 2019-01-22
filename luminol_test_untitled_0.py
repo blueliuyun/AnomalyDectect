@@ -20,7 +20,7 @@ asData = [0]
 asTime = [0]
 
 my_detector = AnomalyDetector(
-        time_series='./SAR-device.sdb.await__tmp_20190111_1735__BAY01_0355_20181130_030005_246+ALL__U0.csv',
+        time_series='./SAR-device.sdb.await__PDZ810__20190121_Switch__BAY01_0001_20190115_091118_218__U0.csv',
         score_threshold=0.1, #1.0,
         algorithm_name='derivative_detector')#derivative_detector'exp_avg_detector#'bitmap_detector)#, algorithm_params = {'smoothing factor': 0.2, 'lag_window_size': 64 })
 

@@ -199,7 +199,7 @@ unsigned short unit_detect_anomalies(void)
         //    ×××  所以必须逐个点判别了。
         //return stCycleAll.nIndex;
         // 2.1 +++ @2019-01-09 优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData
-        for(i=384; i<stCycleAll.nIndex; i++){            
+        for(i=384; i<=stCycleAll.nIndex; i++){            
             unsigned short nOverChangeAvg = 0;   // 累计平均值，对应 j 值
             unsigned short nOverChangeFirst = 0; // 当前值的 Score 大于 1.2 倍  
             float f_local_sum = 0;  // 计算平均值的临时变量
@@ -241,7 +241,7 @@ unsigned short unit_detect_anomalies(void)
         // DEL---3. 如果，在 13 个周波内，MAX-Score 不在第4~5周波内，且出现在第5个周波之后。
         // DEL---   优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData
         //for(i=384; i<(640+128); i++){ //@2019-01-12 11:00 +128 
-        for(i=384; i<stCycleAll.nIndex; i++){  //@2019-01-12 16:58 
+        for(i=384; i<=stCycleAll.nIndex; i++){  //@2019-01-12 16:58 
             unsigned short nOverChangeAvg = 0;   // 累计平均值，对应 j 值
             unsigned short nOverChangeFirst = 0; // 当前值的 Score 大于 1.2 倍            
             float f_local_sum = 0;  // 计算平均值的临时变量
@@ -255,15 +255,17 @@ unsigned short unit_detect_anomalies(void)
                 return i; // 返回第一个非0的导数值。
             }//[End] 3.1.1 
 
-            if(gfMemScore[i] > 1.2*stCycleFstSecThd.fData){
+            //if(gfMemScore[i] > 1.2*stCycleFstSecThd.fData){
+			if(gfMemScore[i] > 1.1*stCycleFstSecThd.fData){ //@2019-01-13 解决起点比较平缓的情况
                 nOverChangeFirst = 1;
-                for(j=0; j<3; j++){
-                    f_local_sum += gfMemScore[i+j-1];                
-                }
+                //for(j=0; j<3; j++){
+                //    f_local_sum += gfMemScore[i+j-1];                
+                //}
                 //if(f_local_sum/3 > 1.1*stCycleFstSecThd.fData){
-                if(f_local_sum/3 > 1.05*stCycleFstSecThd.fData){
-                    nOverChangeAvg = 1;
-                }
+                //if(f_local_sum/2 > 1.05*stCycleFstSecThd.fData){
+                //    nOverChangeAvg = 1;
+                //}
+                nOverChangeAvg = 1; //@2019-01-13 解决起点比较平缓的情况
             }
 
             if((nOverChangeAvg >= 1) && (gfMemScore[i-1] <= gfMemScore[i])){
@@ -322,7 +324,7 @@ short unit_detect_algorithm_run(float *p_data, short n_len){
  */
 void unit_unit_detect_test_case()
 {
-    printf("Hello, world. This is U0 C code. 2019-01-03 15:12 \r\n");
+    printf("Hello, world. This is U0 C code. 2019-01-22 10:30 \r\n");
     return;
 }
 

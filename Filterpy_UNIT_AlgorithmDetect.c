@@ -9,7 +9,7 @@
 // 128*13=1664, Total 13 Cycels
 #define UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM 1664
 #define UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM 128
-#define UNIT_DETECT_CORRELATOR_THRESHOLD 0.5
+#define UNIT_DETECT_CORRELATOR_THRESHOLD 0.72
 
 // private aabs |...|
 #define aabs(a) (a)>0?(a):(0-(a))
@@ -342,32 +342,64 @@ short unit_detect_algorithm_run(float *p_data, short n_len){
 static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_data, short n_len)
 {
     float f_correlator = 0.0;
-    unsigned short i = 0;
+    unsigned short i=0, j=0;
     unsigned short n_local_num = 10; // Before and After the MAX-Abnormal-Point
-    float *p_data_before = (p_data + nIndex - UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM - n_local_num);
+    //float *p_data_before = (p_data + nIndex - UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM - n_local_num);
+    float *p_data_before = p_data;
     float *p_data_current = (p_data + nIndex - n_local_num);
     float sum_up = 0.0, sum_down = 0.0, sum_down_a = 0.0,  sum_down_b = 0.0;
+    float average_a = 0.0, average_b = 0.0;
 
-    for(i=0; i<(n_local_num*2+1); i++){
-        sum_up += *(p_data_before+i) * (*(p_data_current+i));
-        sum_down_a += *(p_data_before+i) * (*(p_data_before+i));
-        sum_down_b += *(p_data_current+i) * (*(p_data_current+i));
-    }
-    
-    sum_down = sum_down_a * sum_down_b;
+    //for(j=0; j<nIndex; j++){
+    for(j=0; j<UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*4; j++){
+        sum_up = 0.0;
+        sum_down = 0.0;
+        sum_down_a = 0.0;
+        sum_down_b = 0.0;
+        average_a = 0.0;
+        average_b = 0.0;
+        // j1. 从数据Data的起始开始，遍历是否有相似度 >= 0.5 的情况； 这样是避免了考虑 周期 N，因为故障前波形的周期不一定完全=50Hz
+        // j2. 仅需比对前 4 个周波数据即可
+        for(i=0; i<(n_local_num*2+1); i++){
+            average_a += *(p_data_before+j+i);
+            average_b += *(p_data_current+i);
+        }
+        average_a /= (n_local_num*2+1);
+        average_b /= (n_local_num*2+1);
 
-    if(sum_down > 0){
-        // 1. 
-        sum_down = sqrtf(sum_down);
-        f_correlator = sum_up/sum_down;
-        return f_correlator;
-    }else if(sum_down_a != sum_down_b){
-        // 2. means that only sum_down_a==0 or only sum_down_b==0
-        return f_correlator = 0.0;
-    }else{
-        // 3. means that ALL sum_down_a==0  and sum_down_b==0, this will not occur.
-        return f_correlator = 1.0;
+        for(i=0; i<(n_local_num*2+1); i++){
+            sum_up += (*(p_data_before+j+i) - average_a) * (*(p_data_current+i) - average_b);
+            sum_down_a += (*(p_data_before+j+i) - average_a) * (*(p_data_before+j+i) - average_a);
+            sum_down_b += (*(p_data_current+i) - average_b) * (*(p_data_current+i) - average_b);
+        }
+        
+        sum_down = sum_down_a * sum_down_b;
+
+        if(sum_down > 0){
+            // 1. 
+            sum_down = sqrtf(sum_down);
+            f_correlator = sum_up/sum_down;
+            //printf("f_correlator = %f \r\n", f_correlator);
+            //return f_correlator;
+        }else if(sum_down_a != sum_down_b){
+            // 2. means that only sum_down_a==0 or only sum_down_b==0
+            //printf("f_correlator = %f \r\n", f_correlator);
+            //return f_correlator = 0.0;
+            f_correlator = 0.0;
+        }else{
+            // 3. means that ALL sum_down_a==0  and sum_down_b==0, this will not occur.
+            //printf("f_correlator = %f \r\n", f_correlator);
+            //return f_correlator = 1.0;
+            f_correlator = 1.0;
+        }
+
+        if(f_correlator >= UNIT_DETECT_CORRELATOR_THRESHOLD){
+            break;
+        }
     }
+
+    printf("f_correlator = %f \t nIndex = %d \r\n", f_correlator, nIndex);
+    return f_correlator;
 }
 
 /**
@@ -377,7 +409,7 @@ static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_da
  */
 void unit_unit_detect_test_case()
 {
-    printf("Hello, world. This is U0 C code. 2019-01-23 15:12 \r\n");
+    printf("Hello, world. This is U0 C code. 2019-01-23 17:57 \r\n");
     return;
 }
 

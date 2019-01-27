@@ -20,8 +20,14 @@ asData = [0]
 asTime = [0]
 
 my_detector = AnomalyDetector(
-        time_series='./SAR-device.sdb.await__PDZ810__20190121_Switch__BAY01_0001_20190115_091118_218__U0.csv',
-        score_threshold=0.1, #1.0,
+        #time_series='./SAR-device.sdb.await__20190122_1500__负荷开关__0001__BAY01_0514_20181210_023118_850__U0.csv',
+        #time_series='./SAR-device.sdb.await__New__Index580__L3 区外 L5 1000欧 B相__BAY01_0046_20181001_044812_313__U0.csv',
+        #time_series='./SAR-device.sdb.await__故障回放__PDZ810_20190108__RD_IN_287__F_BAY01_0239_20181126_071233_183__U0.csv',
+        #time_series='./SAR-device.sdb.await__研发中心波形_高阻接地_00025_20171025_201648_049_F__U0.csv',
+        #time_series='./SAR-device.sdb.await__PDZ810__20190121_Switch__BAY01_0001_20190115_091118_218__U0.csv',
+        time_series='./SAR-device.sdb.await__2017-07-20 第四项检测L3 区外 L5 1000欧 C相__U0.csv',
+        #score_threshold=0.1, #1.0,
+        score_threshold= 0.06260301253602814,
         algorithm_name='derivative_detector')#derivative_detector'exp_avg_detector#'bitmap_detector)#, algorithm_params = {'smoothing factor': 0.2, 'lag_window_size': 64 })
 
 score = my_detector.get_all_scores()
@@ -38,7 +44,7 @@ asAnomal = my_detector.get_anomalies()
 #    print(a)
 
 asData = asData[:1664]    
-pylab.figure(figsize=(16, 8))
+pylab.figure(figsize=(64, 32))
 pylab.subplot(311)
 #asData = asData[:582]
 x = np.arange(1, len(asData)+1, 1)
@@ -58,16 +64,25 @@ if asAnomal:
     else:
         print('False Correlator')
 
+"""
+
 #####################
-correlator = Correlator(time_series_a='./SAR-device.sdb.await_不接地分支_2KohmAlarm_443935_2018_12_28_20_12_11_634453_测试线3#_I2.csv', 
-                        time_series_b='./SAR-device.sdb.await_不接地分支_2KohmAlarm_443935_2018_12_28_20_12_11_634453_测试线3#_I0.csv')
+time_period = asAnomal[0].get_time_window()
+correlator = Correlator(#time_series_a='./SAR-device.sdb.await__20190122_1500__负荷开关__0001__BAY01_0514_20181210_023118_850__U0__568-588.csv',
+                        #time_series_a='./SAR-device.sdb.await__DCU1923ZeroOrder(4_8)2017-11-10 11_51_02_831016__U0_657-677.csv',
+                        #time_series_b='./SAR-device.sdb.await__DCU1923ZeroOrder(4_8)2017-11-10 11_51_02_831016__U0_401-421.csv')
+                        time_series_a='./SAR-device.sdb.await__20190122_1500__负荷开关__0001__BAY01_0514_20181210_023118_850__U0.csv',
+                        time_series_b='./SAR-device.sdb.await__故障回放__PDZ810_20190108__RD_IN_287__F_BAY01_0239_20181126_071233_183__U0.csv')
+                        #time_series_a='./SAR-device.sdb.await__故障回放__PDZ810_20190108__RD_IN_287__F_BAY01_0239_20181126_071233_183__U0.csv',
+                        #time_series_b='./SAR-device.sdb.await__故障回放__PDZ810_20190108__RD_IN_287__F_BAY01_0239_20181126_071233_183__U0.csv',                        
+                        #time_series_b='./SAR-device.sdb.await__DCU1923ZeroOrder(4_8)2017-11-10 11_51_02_831016__U0_913-933.csv')
+                        #time_series_b='./SAR-device.sdb.await__New__Index580__L3 区外 L5 1000欧 B相__BAY01_0046_20181001_044812_313__U0_314-334.csv')
+                        #time_period=time_period)
 print(correlator.get_correlation_result().coefficient)
-if correlator.is_correlated(threshold=0.9):
+if correlator.is_correlated(threshold=0.2):
     print('Ture Correlator')
 else:
     print('False Correlator')
-
-"""
 
 # 1. 找到前 3 CYCLE 中最大的 MAXscore； 这个思路中 【 2倍的比例关系】 仅是根据已有数据的试验分析。
 # 2. 从第 (128*3+1) 点开始与 MAXscore 比较，

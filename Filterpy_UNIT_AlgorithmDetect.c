@@ -9,7 +9,7 @@
 // 128*13=1664, Total 13 Cycels
 #define UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM 1664
 #define UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM 128
-#define UNIT_DETECT_CORRELATOR_THRESHOLD 0.72
+#define UNIT_DETECT_CORRELATOR_THRESHOLD 0.7
 
 // private aabs |...|
 #define aabs(a) (a)>0?(a):(0-(a))
@@ -25,12 +25,22 @@ static float gfMemScore[UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM];
 static float gfMemDerivatives[UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM];
 static float gfMemData[UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM];
 
+// Record the MAX-Pointer data Information.
 typedef struct
 {
-    unsigned short nIndex;      /**< Index of the MAX-Pointer data.     */
     float fData;     			/**< Value of the MAX-Pointer data.     */
+    unsigned short nIndex;      /**< Index of the MAX-Pointer data.     */    
 } INDEX_F32_STRUCT;
 INDEX_F32_STRUCT stCycleAll, stCycleFstSecThd, stCycleFourFive;
+
+// Record the Range of continuous MAX-Pointer Information.
+typedef struct
+{
+    float anomaly_score;            /**< Sum-Score of the MAX-Pointer Range . */
+    unsigned short index_start;     /**< Start Index of the MAX-Pointer Range . */
+    unsigned short index_end;       /**< End Index of the MAX-Pointer Range . */
+} RANGE_INDEX_F32_STRUCT;
+RANGE_INDEX_F32_STRUCT stRangeIndex[3]; // Use FIFO, if >=3 then FIFO Queue.
 
 // Func declaration.
 static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_data, short n_len);
@@ -278,7 +288,9 @@ unsigned short unit_detect_anomalies(void)
                 //break;
                 //return i;
                 //@2019-01-23 Check the nIndex, avoid of early-find.
-                if(unit_detect_algorithm_correlator(i, gfMemData, UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM) < UNIT_DETECT_CORRELATOR_THRESHOLD ){
+                //if(unit_detect_algorithm_correlator(i, gfMemData, UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM) < UNIT_DETECT_CORRELATOR_THRESHOLD ){
+                //@2019-01-25 Renew, use gfMemScore instead of gfMemData.
+                if(unit_detect_algorithm_correlator(i, gfMemScore, UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM) < UNIT_DETECT_CORRELATOR_THRESHOLD ){
                     return i;
                 }
             }else if(nOverChangeFirst >= 1){
@@ -325,7 +337,7 @@ short unit_detect_algorithm_run(float *p_data, short n_len){
 }
 
 /**
- * Clac the correlator and Check the MAX-Abnormal-Point.
+ * Calc the correlator and Check the MAX-Abnormal-Point.
  * If correlator >= 0.5 means the current nIndex is not proper, and 
  * need find the next one.
  * ----------
@@ -333,9 +345,9 @@ short unit_detect_algorithm_run(float *p_data, short n_len){
  * nIndex : unsigned short
  *   the current nIndex of MAX-Abnormal-Point-Starter
  * *p_data : float
- *   U0 data.
+ *   U0-Score data.
  * n_len : short
- *   U0 data length.
+ *   U0-Score data length.
  * ----------
  * Return ：correlator, is float type. [-1.0 ~ 1.0]
  */
@@ -343,7 +355,7 @@ static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_da
 {
     float f_correlator = 0.0;
     unsigned short i=0, j=0;
-    unsigned short n_local_num = 10; // Before and After the MAX-Abnormal-Point
+    unsigned short n_local_num = 3; // Before and After the MAX-Abnormal-Point
     //float *p_data_before = (p_data + nIndex - UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM - n_local_num);
     float *p_data_before = p_data;
     float *p_data_current = (p_data + nIndex - n_local_num);
@@ -393,6 +405,8 @@ static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_da
             f_correlator = 1.0;
         }
 
+        printf("f_correlator = %f \t nIndex = %d \t f_correlator = %f \r\n", f_correlator, nIndex, f_correlator);
+
         if(f_correlator >= UNIT_DETECT_CORRELATOR_THRESHOLD){
             break;
         }
@@ -402,6 +416,27 @@ static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_da
     return f_correlator;
 }
 
+
+/**
+ * Detect anomalies using a threshold on anomaly scores.
+ * ----------
+ * Parameters : 
+ * *p_data : float
+ *   U0-Score data, such as gfMemScore[]
+ * n_len : short
+ *   U0-Score data length.
+ * ----------
+ * Return ：unsigned short nIndex, the U0-Max-Starter in Cycle4~5.
+ */
+static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short n_len)
+{
+    float threshold = stCycleFstSecThd.pData; // == stCycleFstSecThd.pData of the MAX-Pointer data. Now assume !=0
+    
+    //# Find all the anomaly intervals.
+
+
+}
+
 /**
  * Test Case Func.
  * ----------
@@ -409,7 +444,7 @@ static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_da
  */
 void unit_unit_detect_test_case()
 {
-    printf("Hello, world. This is U0 C code. 2019-01-23 17:57 \r\n");
+    printf("Hello, world. This is U0 C code. 2019-01-25 18:53 \r\n");
     return;
 }
 

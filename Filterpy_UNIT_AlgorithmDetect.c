@@ -34,16 +34,18 @@ typedef struct
 INDEX_F32_STRUCT stCycleAll, stCycleFstSecThd, stCycleFourFive;
 
 // Record the Range of continuous MAX-Pointer Information.
+#define UNIT_DETECT_RANGE_INDEX_NUM 3
 typedef struct
 {
     float anomaly_score;            /**< Sum-Score of the MAX-Pointer Range . */
     unsigned short index_start;     /**< Start Index of the MAX-Pointer Range . */
     unsigned short index_end;       /**< End Index of the MAX-Pointer Range . */
 } RANGE_INDEX_F32_STRUCT;
-RANGE_INDEX_F32_STRUCT stRangeIndex[3]; // Use FIFO, if >=3 then FIFO Queue.
+RANGE_INDEX_F32_STRUCT stRangeIndex[UNIT_DETECT_RANGE_INDEX_NUM]; // Only Record 'UNIT_DETECT_RANGE_INDEX_NUM' Array.
 
 // Func declaration.
 static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_data, short n_len);
+static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short n_len);
 
 /**
  * Compute derivatives of the time series.
@@ -251,8 +253,8 @@ unsigned short unit_detect_anomalies(void)
             nOverChangeFirst = 0;
         }
     }else if(640<=stCycleAll.nIndex && stCycleAll.nIndex<UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM){
-        // DEL---3. 如果，在 13 个周波内，MAX-Score 不在第4~5周波内，且出现在第5个周波之后。
-        // DEL---   优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData
+        // DEL---3. 如果，在 13 个周波内，MAX-Score 不在第4~5周波内，且出现在第5个周波之后。 ---DEL
+        // DEL---   优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData                ---DEL
         //for(i=384; i<(640+128); i++){ //@2019-01-12 11:00 +128 
         for(i=384; i<=stCycleAll.nIndex; i++){  //@2019-01-12 16:58 
             unsigned short nOverChangeAvg = 0;   // 累计平均值，对应 j 值
@@ -269,8 +271,8 @@ unsigned short unit_detect_anomalies(void)
             }//[End] 3.1.1 
 
             //if(gfMemScore[i] > 1.2*stCycleFstSecThd.fData){
-			if(gfMemScore[i] > 1.1*stCycleFstSecThd.fData){ //@2019-01-13 解决起点比较平缓的情况
-                nOverChangeFirst = 1;
+			//if(gfMemScore[i] > 1.1*stCycleFstSecThd.fData){ //@2019-01-13 解决起点比较平缓的情况
+                //nOverChangeFirst = 1;
                 //for(j=0; j<3; j++){
                 //    f_local_sum += gfMemScore[i+j-1];                
                 //}
@@ -278,10 +280,10 @@ unsigned short unit_detect_anomalies(void)
                 //if(f_local_sum/2 > 1.05*stCycleFstSecThd.fData){
                 //    nOverChangeAvg = 1;
                 //}
-                nOverChangeAvg = 1; //@2019-01-13 解决起点比较平缓的情况
-            }
+                //nOverChangeAvg = 1; //@2019-01-13 解决起点比较平缓的情况
+            //}
 
-            if((nOverChangeAvg >= 1) && (gfMemScore[i-1] <= gfMemScore[i])){
+            //if((nOverChangeAvg >= 1) && (gfMemScore[i-1] <= gfMemScore[i])){
                 // When nOverChange==3, find the MAX-Point, otherwise nOverChange<3 .
                 // and [i] <= [i+1]
                 // If find the MAX-Point, return the Index of U0[i].
@@ -290,17 +292,19 @@ unsigned short unit_detect_anomalies(void)
                 //@2019-01-23 Check the nIndex, avoid of early-find.
                 //if(unit_detect_algorithm_correlator(i, gfMemData, UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM) < UNIT_DETECT_CORRELATOR_THRESHOLD ){
                 //@2019-01-25 Renew, use gfMemScore instead of gfMemData.
-                if(unit_detect_algorithm_correlator(i, gfMemScore, UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM) < UNIT_DETECT_CORRELATOR_THRESHOLD ){
-                    return i;
-                }
-            }else if(nOverChangeFirst >= 1){
+                //if(unit_detect_algorithm_correlator(i, gfMemScore, UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM) < UNIT_DETECT_CORRELATOR_THRESHOLD ){
+                //    return i;
+                //}
+            //}else if(nOverChangeFirst >= 1){
                 // 仅更新待比较的 Score 值  @2019-01-13 不再更新 score，则仍用 1~3 周波内的最大 score
                 //stCycleFstSecThd.fData = gfMemScore[i];
-            }
+            //}
 
-            nOverChangeAvg = 0; // 清零，准备下一次的 j 循环。
-            nOverChangeFirst = 0;
+            //nOverChangeAvg = 0; // 清零，准备下一次的 j 循环。
+            //nOverChangeFirst = 0;
         }
+        // @2019-01-27 
+        return unit_detect_algorithm_anomalies_range(gfMemScore , 1664);
         
     }else{
         return 0; //  Fetal error.
@@ -362,7 +366,6 @@ static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_da
     float sum_up = 0.0, sum_down = 0.0, sum_down_a = 0.0,  sum_down_b = 0.0;
     float average_a = 0.0, average_b = 0.0;
 
-    //for(j=0; j<nIndex; j++){
     for(j=0; j<UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*4; j++){
         sum_up = 0.0;
         sum_down = 0.0;
@@ -391,31 +394,24 @@ static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_da
             // 1. 
             sum_down = sqrtf(sum_down);
             f_correlator = sum_up/sum_down;
-            //printf("f_correlator = %f \r\n", f_correlator);
-            //return f_correlator;
         }else if(sum_down_a != sum_down_b){
             // 2. means that only sum_down_a==0 or only sum_down_b==0
-            //printf("f_correlator = %f \r\n", f_correlator);
-            //return f_correlator = 0.0;
             f_correlator = 0.0;
         }else{
             // 3. means that ALL sum_down_a==0  and sum_down_b==0, this will not occur.
-            //printf("f_correlator = %f \r\n", f_correlator);
-            //return f_correlator = 1.0;
             f_correlator = 1.0;
         }
 
-        printf("f_correlator = %f \t nIndex = %d \t f_correlator = %f \r\n", f_correlator, nIndex, f_correlator);
+        //printf("f_correlator = %f \t nIndex = %d \t f_correlator = %f \r\n", f_correlator, nIndex, f_correlator);
 
         if(f_correlator >= UNIT_DETECT_CORRELATOR_THRESHOLD){
             break;
         }
     }
 
-    printf("f_correlator = %f \t nIndex = %d \r\n", f_correlator, nIndex);
+    //printf("f_correlator = %f \t nIndex = %d \r\n", f_correlator, nIndex);
     return f_correlator;
 }
-
 
 /**
  * Detect anomalies using a threshold on anomaly scores.
@@ -430,11 +426,67 @@ static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_da
  */
 static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short n_len)
 {
-    float threshold = stCycleFstSecThd.pData; // == stCycleFstSecThd.pData of the MAX-Pointer data. Now assume !=0
+    float threshold = stCycleFstSecThd.fData; // == stCycleFstSecThd.pData of the MAX-Pointer data. Now assume !=0
+    unsigned short i=0, j=0;
+    unsigned short n_count = 0; // <=3, 
+    unsigned short n_start = 0, n_end = 0;
+    float f_sum = 0.0;
+        
+    // s1. # Find all the anomaly intervals.
+    memset(stRangeIndex, 0, sizeof(stRangeIndex));
+    for(i=0; i<1664; i++){
+        if(p_data[i] > threshold){
+            n_end = i;
+            f_sum += p_data[i];
+            if(0 == n_start){
+                n_start = i;
+            } // if(0 == n_start) ...
+        }else if( (n_start != 0) && (n_end != 0) ){
+            stRangeIndex[n_count].index_start = n_start;
+            stRangeIndex[n_count].index_end = n_end;
+            stRangeIndex[n_count].anomaly_score = f_sum;            
+            n_start = n_end = 0;
+            f_sum = 0.0;            
+            n_count = n_count + 1;
+            if(n_count > UNIT_DETECT_RANGE_INDEX_NUM){
+                break; // Only Record 3 Array.
+            }
+        }// else if
+    }
+
+    // s2. Now have find 3 the anomaly intervals.
+    unsigned short n_pos = 0; // Record the Position of MAX-Point.
+    printf("unit_detect_algorithm_anomalies_range(...) \t threshold = %f \r\n", threshold);
+    for(i=0; i<UNIT_DETECT_RANGE_INDEX_NUM; i++){
+        printf("stRangeIndex[i].index_start = %d \t stRangeIndex[i].index_end = %d \t stRangeIndex[i].anomaly_score = %f \r\n", 
+            stRangeIndex[i].index_start, stRangeIndex[i].index_end, stRangeIndex[i].anomaly_score );
+
+        if(stRangeIndex[i].anomaly_score >= 1.5*threshold){
+            for(j=stRangeIndex[i].index_start; j<=stRangeIndex[i].index_end; j++){
+                if(p_data[j] >= 1.05*threshold){
+                    n_pos = j; // Find the MAX-Point !!!
+                    return n_pos;
+                }
+            }
+        }
+    }
     
-    //# Find all the anomaly intervals.
+    if(0 == n_pos){
+        // s3. Above of all, there is no 1.5*threshold, so decrease to 1.05*threshold
+        for(i=0; i<UNIT_DETECT_RANGE_INDEX_NUM; i++){           
+            if(stRangeIndex[i].anomaly_score >= 1.05*threshold){
+                for(j=stRangeIndex[i].index_start; j<=stRangeIndex[i].index_end; j++){
+                    if(p_data[j] > threshold){
+                        n_pos = j; // Find the MAX-Point !!!
+                        return n_pos;
+                    }
+                }
+            }
+        }
+    }
 
-
+    //
+    return n_pos;
 }
 
 /**

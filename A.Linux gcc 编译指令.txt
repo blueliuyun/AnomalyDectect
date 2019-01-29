@@ -1,1 +1,3 @@
 [root@localhost tian]# gcc filterpy_unit_algorithmdetect.c -fPIC -shared -o filterpy_unit_algorithmdetect.so
+
+[root@localhost tian]# gcc filterpy_unit_algorithmckf.c -fPIC -shared -o filterpy_unit_algorithmckf.so

@@ -25,9 +25,10 @@ my_detector = AnomalyDetector(
         #time_series='./SAR-device.sdb.await__故障回放__PDZ810_20190108__RD_IN_287__F_BAY01_0239_20181126_071233_183__U0.csv',
         #time_series='./SAR-device.sdb.await__研发中心波形_高阻接地_00025_20171025_201648_049_F__U0.csv',
         #time_series='./SAR-device.sdb.await__PDZ810__20190121_Switch__BAY01_0001_20190115_091118_218__U0.csv',
-        time_series='./SAR-device.sdb.await__2017-07-20 第四项检测L3 区外 L5 1000欧 C相__U0.csv',
+        #time_series='./SAR-device.sdb.await__2017-07-20 第四项检测L3 区外 L5 1000欧 C相__U0.csv',
+        time_series='./SAR-device.sdb.await__中国电科院小电流波形 研发中心DTU__00026_20171025_201659_849_F+ALL__U0.csv',
         #score_threshold=0.1, #1.0,
-        score_threshold= 0.06260301253602814,
+        score_threshold= 6.893981599348606,
         algorithm_name='derivative_detector')#derivative_detector'exp_avg_detector#'bitmap_detector)#, algorithm_params = {'smoothing factor': 0.2, 'lag_window_size': 64 })
 
 score = my_detector.get_all_scores()

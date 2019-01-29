@@ -304,7 +304,7 @@ unsigned short unit_detect_anomalies(void)
             //nOverChangeFirst = 0;
         }
         // @2019-01-27 
-        return unit_detect_algorithm_anomalies_range(gfMemScore , 1664);
+        return unit_detect_algorithm_anomalies_range(gfMemScore , UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM);
         
     }else{
         return 0; //  Fetal error.
@@ -434,7 +434,8 @@ static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short
         
     // s1. # Find all the anomaly intervals.
     memset(stRangeIndex, 0, sizeof(stRangeIndex));
-    for(i=0; i<1664; i++){
+	// @2019-01-29 1.有些U0起点比较靠近第640点, 所以这里需要多判断 1/4 周波, 比如 {中国电科院/BAY00_1226_20180106_100858_981.cfg}
+    for(i=0; i<UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*5+32; i++){
         if(p_data[i] > threshold){
             n_end = i;
             f_sum += p_data[i];
@@ -449,7 +450,7 @@ static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short
             f_sum = 0.0;            
             n_count = n_count + 1;
             if(n_count > UNIT_DETECT_RANGE_INDEX_NUM){
-                break; // Only Record 3 Array.
+                break; // Only Record UNIT_DETECT_RANGE_INDEX_NUM Array.
             }
         }// else if
     }

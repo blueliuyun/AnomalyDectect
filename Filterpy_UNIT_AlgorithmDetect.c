@@ -34,7 +34,7 @@ typedef struct
 INDEX_F32_STRUCT stCycleAll, stCycleFstSecThd, stCycleFourFive;
 
 // Record the Range of continuous MAX-Pointer Information.
-#define UNIT_DETECT_RANGE_INDEX_NUM 3
+#define UNIT_DETECT_RANGE_INDEX_NUM 5
 typedef struct
 {
     float anomaly_score;            /**< Sum-Score of the MAX-Pointer Range . */
@@ -159,7 +159,8 @@ void unit_detect_set_scores(float* anom_scores)
     //printf("%f \r\n", fStdev);
     if(fStdev){
         // fStdev
-        for(i=0; i<=383; i++){
+        //for(i=0; i<=383; i++){
+        for(i=0; i<=UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*4-1; i++){ //@2019-01-30 Use the 1~4 CYCLE.
             anom_scores[i] /= fStdev;
             //gfMemScore[i] = anom_scores[i];             
             // Record the ALL-Cycle MAX-Point.
@@ -170,10 +171,10 @@ void unit_detect_set_scores(float* anom_scores)
         }
         //printf("stCycleFstSecThd.nIndex = %d \t stCycleFstSecThd.fData = %f \r\n", stCycleFstSecThd.nIndex, stCycleFstSecThd.fData);
 
-        // (2) 384~639, 第4~5周波
+        // (2) 512~639, 第 5 周波
         stCycleFourFive.nIndex = stCycleFstSecThd.nIndex;
         stCycleFourFive.fData = stCycleFstSecThd.fData;
-        for(i=384; i<=639; i++){
+        for(i=UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*4; i<=639; i++){
             anom_scores[i] /= fStdev;
             if(anom_scores[i] > stCycleFourFive.fData){
                 stCycleFourFive.nIndex = i;
@@ -205,11 +206,11 @@ unsigned short unit_detect_anomalies(void)
 {
     unsigned short i=0, j=0;
     
-    if(383 > stCycleAll.nIndex){
-        // 1. MAX-Score 不应该落在前 3 个周波内，所以 Fetal error .
+    if(UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*4 > stCycleAll.nIndex){
+        // 1. MAX-Score 不应该落在前 4 个周波内，所以 Fetal error .
         return 0; 
-    }else if(384<=stCycleAll.nIndex  && stCycleAll.nIndex<=639){
-        // 2. ××× 如果 MAX-Score 存在在第4~5周波内，则该MAX-Score就是U0的故障起点。 
+    }else if(UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*4<=stCycleAll.nIndex  && stCycleAll.nIndex<=639){
+        // 2. ××× 如果 MAX-Score 存在在第5周波内，则该MAX-Score就是U0的故障起点。 
         //    ××× @2019-01-09 验证波形 SAR-device.sdb.await__PDZ810_20190108__981_BAY01_0219_20181126_060056_456__U0 时此种情况不成立。
         //    ×××  所以必须逐个点判别了。
         //return stCycleAll.nIndex;
@@ -256,7 +257,9 @@ unsigned short unit_detect_anomalies(void)
         // DEL---3. 如果，在 13 个周波内，MAX-Score 不在第4~5周波内，且出现在第5个周波之后。 ---DEL
         // DEL---   优先寻找 3 个连续的值大于 1.2 倍 stCycleFstSecThd.fData                ---DEL
         //for(i=384; i<(640+128); i++){ //@2019-01-12 11:00 +128 
-        for(i=384; i<=stCycleAll.nIndex; i++){  //@2019-01-12 16:58 
+        //for(i=384; i<=stCycleAll.nIndex; i++){  //@2019-01-12 16:58 
+        // @2019-01-29 1.有些U0起点比较靠近第640点, 所以这里需要多判断 1/4 周波, 比如 {中国电科院/BAY00_1226_20180106_100858_981.cfg}
+        for(i=0; i<UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*5+32; i++){
             unsigned short nOverChangeAvg = 0;   // 累计平均值，对应 j 值
             unsigned short nOverChangeFirst = 0; // 当前值的 Score 大于 1.2 倍            
             float f_local_sum = 0;  // 计算平均值的临时变量

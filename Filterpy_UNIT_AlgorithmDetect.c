@@ -11,6 +11,9 @@
 #define UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM 128
 #define UNIT_DETECT_CORRELATOR_THRESHOLD 0.7
 
+#define UNIT_DETECT_DATA_U0_THRESHOLD 14  // @2019-02-23 U0 通道采样点绝对值 14 约对应 1V 有效值
+#define UNIT_DETECT_DATA_I0_THRESHOLD 14  // @2019-02-23 I0 通道采样点绝对值 14 约对应 10mA 有效值
+
 // private aabs |...|
 #define aabs(a) (a)>0?(a):(0-(a))
 
@@ -23,7 +26,9 @@ float gf_smoothing_factor = 0.2;  //DEFAULT_DERI_SMOOTHING_FACTOR;
 // Private Var
 static float gfMemScore[UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM];
 static float gfMemDerivatives[UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM];
-static float gfMemData[UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM];
+static float gfMemData[UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM];            // store U0 data original
+static float gfMemDataI0[UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM];          // store I0 data 
+static float gfMemDataU0[UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM];          // store U0 data 
 
 // Record the MAX-Pointer data Information.
 typedef struct
@@ -46,6 +51,8 @@ RANGE_INDEX_F32_STRUCT stRangeIndex[UNIT_DETECT_RANGE_INDEX_NUM]; // Only Record
 // Func declaration.
 static float unit_detect_algorithm_correlator(unsigned short nIndex, float *p_data, short n_len);
 static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short n_len);
+static void unit_detect_calc_sudden_change(float *pSampData, short nLenSamp);
+static unsigned short unit_detect_compare_data_threshold(float *pSampDataU0, float *pSampDataI0, short nSampIndex);
 
 /**
  * Compute derivatives of the time series.
@@ -53,7 +60,7 @@ static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short
 void unit_detect_compute_derivatives(void)
 {
     unsigned short i = 0;
-    float td = 2000.0;//1; // 求导数的分母
+    float td = 1; //2000.0; 求导数的分母
     float derivative = 0.0;
 
     for(i=1; i< UNIT_DETECT_MAX_FAULTWAVE_FRAME_NUM; i++){      
@@ -226,7 +233,12 @@ unsigned short unit_detect_anomalies(void)
             }
             if( (0==stCycleFstSecThd.fData) && (gfMemScore[i]!=0) ){
                 //stCycleFstSecThd.fData = gfMemScore[i];
-                return i; // 返回第一个非0的导数值。
+                //@2019-02-23 ADD check U0 && I0 threshold.
+                if(unit_detect_compare_data_threshold(gfMemDataU0, gfMemDataI0, i) != 0x00){
+                    return i; // 返回第一个非0的导数值。
+                }else{
+                    continue;
+                }
             }//[End] 2.1.1 
 
             if(gfMemScore[i] > 1.2*stCycleFstSecThd.fData){
@@ -239,13 +251,13 @@ unsigned short unit_detect_anomalies(void)
                 }
             }
 
-            if((nOverChangeAvg >= 1) && (gfMemScore[i-1] <= gfMemScore[i])){
+            if((nOverChangeAvg >= 1) && (gfMemScore[i-1] <= gfMemScore[i]) && (unit_detect_compare_data_threshold(gfMemDataU0, gfMemDataI0, i) != 0x00)){
                 // When nOverChange==3, find the MAX-Point, otherwise nOverChange<3 .
                 // and [i] <= [i+1]
                 // If find the MAX-Point, return the Index of U0[i].
                 //break;
                 return i;
-            }else if(nOverChangeFirst >= 1){
+            //}else if(nOverChangeFirst >= 1){
                 // 仅更新待比较的 Score 值 @2019-01-13 不再更新 score，则仍用 1~3 周波内的最大 score
                 //stCycleFstSecThd.fData = gfMemScore[i];
             }
@@ -270,7 +282,12 @@ unsigned short unit_detect_anomalies(void)
             }
             if( (0==stCycleFstSecThd.fData) && (gfMemScore[i]!=0) ){
                 //stCycleFstSecThd.fData = gfMemScore[i];
-                return i; // 返回第一个非0的导数值。
+                //@2019-02-23 ADD check U0 && I0 threshold.
+                if(unit_detect_compare_data_threshold(gfMemDataU0, gfMemDataI0, i) != 0x00){
+                    return i; // 返回第一个非0的导数值。
+                }else{
+                    continue;
+                }
             }//[End] 3.1.1 
 
             //if(gfMemScore[i] > 1.2*stCycleFstSecThd.fData){
@@ -320,18 +337,26 @@ unsigned short unit_detect_anomalies(void)
  * ---------- 
  * Return： the Index of SuddenChange-U0 : short
  */
-short unit_detect_algorithm_run(float *p_data, short n_len){
+short unit_detect_algorithm_run(float *p_u0_data, float *p_i0_data, short n_len){
     unsigned short nIndex=0, i=0;
     
     // Clear Container
     memset(gfMemScore, 0, sizeof(gfMemScore));
     memset(gfMemDerivatives, 0, sizeof(gfMemDerivatives));
     memset(gfMemData, 0, sizeof(gfMemData));
+    memset(gfMemDataI0, 0, sizeof(gfMemDataI0));
+    memset(gfMemDataU0, 0, sizeof(gfMemDataU0));
 
     // Recv Data & Store
     for(i=0; i<n_len; i++){
-    	gfMemData[i] = *(p_data+i); 
+    	gfMemData[i] = *(p_u0_data+i);
+        gfMemDataU0[i] = *(p_u0_data+i);
+        gfMemDataI0[i] = *(p_i0_data+i); 
 	}
+    
+    // Calc
+    unit_detect_calc_sudden_change(gfMemDataU0, n_len);
+    unit_detect_calc_sudden_change(gfMemDataI0, n_len);
     
     // Calc Scores
     unit_detect_set_scores(gfMemScore);
@@ -438,7 +463,7 @@ static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short
     // s1. # Find all the anomaly intervals.
     memset(stRangeIndex, 0, sizeof(stRangeIndex));
 	// @2019-01-29 1.有些U0起点比较靠近第640点, 所以这里需要多判断 1/4 周波, 比如 {中国电科院/BAY00_1226_20180106_100858_981.cfg}
-    for(i=0; i<UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*5+32; i++){
+    for(i=0; i<=UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*5+32; i++){
         if(p_data[i] > threshold){
             n_end = i;
             f_sum += p_data[i];
@@ -457,6 +482,15 @@ static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short
             }
         }// else if
     }
+    
+    // Deal with the last point. 避免 640+32 前后点的导数值都大于 阈值 而没有给 end 赋值.
+    if( (n_start != 0) && (n_end == (UNIT_DETECT_PER_FAULTWAVE_FRAME_NUM*5+32) ) ){
+        stRangeIndex[n_count].index_start = n_start;
+        stRangeIndex[n_count].index_end = n_end;
+        stRangeIndex[n_count].anomaly_score = f_sum;            
+        n_start = n_end = 0;
+        f_sum = 0.0; 
+    }
 
     // s2. Now have find 3 the anomaly intervals.
     unsigned short n_pos = 0; // Record the Position of MAX-Point.
@@ -467,7 +501,7 @@ static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short
 
         if(stRangeIndex[i].anomaly_score >= 1.5*threshold){
             for(j=stRangeIndex[i].index_start; j<=stRangeIndex[i].index_end; j++){
-                if(p_data[j] >= 1.05*threshold){
+                if((p_data[j] >= 1.05*threshold) && (unit_detect_compare_data_threshold(gfMemDataU0, gfMemDataI0, j) != 0x00)){
                     n_pos = j; // Find the MAX-Point !!!
                     return n_pos;
                 }
@@ -480,7 +514,7 @@ static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short
         for(i=0; i<UNIT_DETECT_RANGE_INDEX_NUM; i++){           
             if(stRangeIndex[i].anomaly_score >= 1.05*threshold){
                 for(j=stRangeIndex[i].index_start; j<=stRangeIndex[i].index_end; j++){
-                    if(p_data[j] > threshold){
+                    if((p_data[j] > threshold) && (unit_detect_compare_data_threshold(gfMemDataU0, gfMemDataI0, j) != 0x00)){
                         n_pos = j; // Find the MAX-Point !!!
                         return n_pos;
                     }
@@ -489,8 +523,54 @@ static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short
         }
     }
 
-    //
+    // End of fun.
     return n_pos;
+}
+
+/**
+ * Calc fault component. 
+ * ----------
+ * Parameters : 
+ * *pSampData : float
+ *   data.
+ * n_len : short
+ *   data length.
+ */
+static void unit_detect_calc_sudden_change(float *pSampData, short nLenSamp)
+{
+    short i = 0;
+
+    for(i=nLenSamp-1; i>=128; i--){
+        *(pSampData + i) = *(pSampData + i) - (*(pSampData + i - 128));
+    }
+
+    for(i; i>=0; i--){
+        *(pSampData + i) = 0;
+    }
+}
+
+/**
+ * Calc fault component. 
+ * ----------
+ * Parameters : 
+ * nSampIndex : short
+ *   Max data starter Point.
+ * ----------
+ * Return : unsigned short
+ *   0x01 means find;  Otherwise 0x00 means not find.
+ */
+static unsigned short unit_detect_compare_data_threshold(float *pSampDataU0, float *pSampDataI0, short nSampIndex)
+{
+    short i = 0;
+
+    for(i=0; i<5; i++){
+        if((aabs(*(pSampDataU0+nSampIndex+i))) > UNIT_DETECT_DATA_U0_THRESHOLD  && (aabs(*(pSampDataI0+nSampIndex+i))) > UNIT_DETECT_DATA_I0_THRESHOLD ){
+        	printf("unit_detect_compare_data_threshold(...) \t pSampDataU0 = %f \t pSampDataI0 = %f \r\n", 
+        		aabs(*(pSampDataU0+nSampIndex+i)), aabs(*(pSampDataI0+nSampIndex+i)) );
+            return 0x01;
+        }
+    }
+    return 0x00;
 }
 
 /**

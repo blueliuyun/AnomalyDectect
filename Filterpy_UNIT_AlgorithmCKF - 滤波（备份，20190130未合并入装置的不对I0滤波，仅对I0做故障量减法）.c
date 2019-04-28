@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 //#include "Filterpy_UNIT_AlgorithmCKF.h"
-//#include "Globevar.h" 
 
 // Constants var  &  Macro
 #define UNIT_CKF_MAX_FAULTWAVE_FRAME_NUM 1664
@@ -1094,6 +1093,7 @@ void unit_ckf_process(/*short*/float *pSampData , short nLenSamp, /*short*/float
     sCKF.saX.pData[0] = gfMemTest[0];
 
     float fTmpData = 0.0;
+    //for(i=64; i<nLenSamp; i++){ // @2019-01-18 跳过前 1/4 周波, 因为故障回放的电流前几个点波形畸变，与原始波形不一致；避免滤波发散。
     for(i=0; i<nLenSamp; i++){
         //fTmpData = *(pSampData+i);
 		fTmpData = gfMemTest[i];

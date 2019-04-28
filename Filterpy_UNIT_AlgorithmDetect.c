@@ -499,7 +499,8 @@ static unsigned short unit_detect_algorithm_anomalies_range(float *p_data, short
         printf("stRangeIndex[i].index_start = %d \t stRangeIndex[i].index_end = %d \t stRangeIndex[i].anomaly_score = %f \r\n", 
             stRangeIndex[i].index_start, stRangeIndex[i].index_end, stRangeIndex[i].anomaly_score );
 
-        if(stRangeIndex[i].anomaly_score >= 1.5*threshold){
+        //if(stRangeIndex[i].anomaly_score >= 1.5*threshold){
+        if(stRangeIndex[i].anomaly_score >= 1.2*threshold){
             for(j=stRangeIndex[i].index_start; j<=stRangeIndex[i].index_end; j++){
                 if((p_data[j] >= 1.05*threshold) && (unit_detect_compare_data_threshold(gfMemDataU0, gfMemDataI0, j) != 0x00)){
                     n_pos = j; // Find the MAX-Point !!!
